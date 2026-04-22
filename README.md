@@ -1,3 +1,6 @@
+# play-intelligence
+Minha tentativa de fazer um plawright inteligente
+
 # Playwright Intelligence
 
 Ferramenta que intercepta a execução de testes Playwright para coletar contexto de falhas, mapear cobertura do sistema e usar IA local (Ollama) para analisar padrões e sugerir melhorias.
