@@ -1,0 +1,34 @@
+{
+  "name": "play-intelligence",
+  "version": "1.0.0",
+  "description": "Playwright Intelligence - IA local para análise de testes",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "playwright test",
+    "test:intelligence": "playwright test",
+    "ai:analyze": "ts-node src/cli.ts analyze",
+    "ai:suggest": "ts-node src/cli.ts suggest-tests",
+    "ai:fragility": "ts-node src/cli.ts fragility",
+    "ai:health": "ts-node src/cli.ts health-check",
+    "build": "tsc"
+  },
+  "keywords": [
+    "playwright",
+    "testing",
+    "ai",
+    "ollama",
+    "qwen"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "@types/node": "^25.6.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}

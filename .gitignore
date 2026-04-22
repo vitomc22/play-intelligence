@@ -1,0 +1,42 @@
+
+# Node
+node_modules/
+dist/
+npm-debug.log
+yarn-error.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Storage
+storage/context.md
+storage/system-map.json
+storage/cache/**
+storage/reports/**
+storage/failures/**
+!storage/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+playwright/.auth/
+
+# Logs
+logs/
+*.log

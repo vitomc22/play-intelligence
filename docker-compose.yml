@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # ─── Ollama: Modelo local (Qwen 7B) ─────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: playwright-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - playwright-net
+
+  # ─── OpenHands: Agent de IA para engenharia de software ──────────────
+  openhands-agent:
+    image: docker.all-hands.dev/all-hands-ai/openhands:main
+    container_name: playwright-openhands-agent
+    ports:
+      - "3000:3000"      # Frontend interativo do OpenHands
+    environment:
+      - LLM_PROVIDER=ollama
+      - LLM_MODEL=ollama/qwen2.5-coder:7b
+      # Como estão na mesma rede Docker, usamos o nome do serviço 'ollama' diretamente
+      - LLM_BASE_URL=http://ollama:11434
+      # Define o diretório atual como a raiz do projeto para o agente
+      - WORKSPACE_BASE=${PWD}
+    volumes:
+      # O socket do Docker é OBRIGATÓRIO para o OpenHands subir sandboxes de execução
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Mapeia a pasta local para dentro do container do agente
+      - ${PWD}:/opt/workspace_base
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - playwright-net
+
+volumes:
+  ollama_data:
+    driver: local
+
+networks:
+  playwright-net:
+    driver: bridge
