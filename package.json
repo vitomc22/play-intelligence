@@ -9,6 +9,7 @@
     "ai:analyze": "ts-node src/cli.ts analyze",
     "ai:suggest": "ts-node src/cli.ts suggest-tests",
     "ai:fragility": "ts-node src/cli.ts fragility",
+    "ai:heal": "ts-node src/cli.ts heal",
     "ai:health": "ts-node src/cli.ts health-check",
     "build": "tsc"
   },

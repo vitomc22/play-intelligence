@@ -1,0 +1,33 @@
+
+> play-intelligence@1.0.0 test
+> playwright test
+
+
+Running 6 tests using 4 workers
+
+  ✘  3 [firefox] › tests/example.spec.ts:3:5 › has title (17ms)
+  ✘  4 [firefox] › tests/example.spec.ts:10:5 › get started link (17ms)
+  ✘  1 [chromium] › tests/example.spec.ts:3:5 › has title (165ms)
+  ✘  2 [chromium] › tests/example.spec.ts:10:5 › get started link (160ms)
+
+
+  1) [chromium] › tests/example.spec.ts:3:5 › has title ────────────────────────────────────────────
+
+    Test was interrupted.
+
+    Error: browserContext.newPage: Test ended.
+
+  2) [chromium] › tests/example.spec.ts:10:5 › get started link ────────────────────────────────────
+
+    Test was interrupted.
+
+    Error: browserContext.newPage: Test ended.
+
+  4 interrupted
+    [chromium] › tests/example.spec.ts:3:5 › has title ─────────────────────────────────────────────
+    [chromium] › tests/example.spec.ts:10:5 › get started link ─────────────────────────────────────
+    [firefox] › tests/example.spec.ts:3:5 › has title ──────────────────────────────────────────────
+    [firefox] › tests/example.spec.ts:10:5 › get started link ──────────────────────────────────────
+  2 did not run
+
+🗺️  [PWI] 0 rota(s) mapeada(s).

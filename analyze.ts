@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { AIProviderFactory } from './src/analyzer/ai-client';
 import { PROMPTS } from './src/analyzer/prompts';
+import process from 'process';
 
 const STORAGE_DIR = path.resolve(__dirname, '../storage');
 const CONTEXT_FILE = path.join(STORAGE_DIR, 'context.md');

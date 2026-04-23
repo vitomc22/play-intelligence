@@ -5,6 +5,7 @@ import * as path from 'path';
 import { AIProviderFactory } from './analyzer/ai-client';
 import { PROMPTS } from './analyzer/prompts';
 import { config, validateConfig, printConfig } from './config';
+import { createHealer } from './healer';
 
 async function main() {
   const args = process.argv.slice(2);
@@ -24,6 +25,9 @@ async function main() {
         break;
       case 'fragility':
         await identifyFragility();
+        break;
+      case 'heal':
+        await healTests();
         break;
       case 'health-check':
         await healthCheck();
@@ -181,6 +185,22 @@ async function healthCheck() {
   }
 }
 
+/**
+ * Healer: Usa OpenHands para corrigir testes automaticamente
+ */
+async function healTests() {
+  console.log('\n🏥 Iniciando Healer com OpenHands...');
+
+  try {
+    const projectRoot = process.cwd();
+    const healer = createHealer(projectRoot);
+    await healer.healFailingTests();
+  } catch (error: any) {
+    console.error('❌ Erro ao executar Healer:', error.message);
+    process.exit(1);
+  }
+}
+
 function printHelp() {
   console.log(`
 ╔════════════════════════════════════════════════════════════════╗
@@ -197,6 +217,10 @@ Comandos disponíveis:
 
   npx ts-node src/cli.ts fragility
     Identifica testes frágeis (flaky tests)
+
+  npx ts-node src/cli.ts heal
+    🆕 Usa OpenHands para corrigir testes automaticamente
+    (Requer que 'npm run ai:analyze' tenha sido executado primeiro)
 
   npx ts-node src/cli.ts health-check
     Verifica se a IA está acessível

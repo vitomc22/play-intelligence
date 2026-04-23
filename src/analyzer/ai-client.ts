@@ -28,9 +28,9 @@ export class OllamaProvider implements AIProvider {
   constructor(config: Partial<AIConfig> = {}) {
     this.model = config.model || process.env.OLLAMA_MODEL || 'qwen2.5-coder:7b';
     this.baseUrl = config.baseUrl || process.env.OLLAMA_URL || 'http://localhost:11434';
-    this.timeout = config.timeout || 300000; // 5 min para Ryzen processar
+    this.timeout = config.timeout || 400000; // 5 min para Ryzen processar
     this.temperature = config.temperature ?? 0.2; // Baixo para respostas técnicas
-    this.maxTokens = config.maxTokens || 2000;
+    this.maxTokens = config.maxTokens || 3000;
   }
 
   async analyze(prompt: string, context: string): Promise<string> {
@@ -74,7 +74,7 @@ export class OllamaProvider implements AIProvider {
         throw new Error(`Ollama error: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as any;
       return data.message?.content ?? '';
     } catch (error: any) {
       clearTimeout(timeoutId);
@@ -102,7 +102,7 @@ export class AnthropicProvider implements AIProvider {
   constructor(config: Partial<AIConfig> = {}) {
     this.apiKey = config.apiKey || process.env.ANTHROPIC_API_KEY || '';
     this.model = config.model || 'claude-3-5-sonnet-20241022';
-    this.maxTokens = config.maxTokens || 2000;
+    this.maxTokens = config.maxTokens || 3000;
 
     if (!this.apiKey) {
       throw new Error('ANTHROPIC_API_KEY não definida');
@@ -133,7 +133,7 @@ export class AnthropicProvider implements AIProvider {
       throw new Error(`Anthropic error: ${response.status} ${response.statusText}`);
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as any;
     return data.content?.[0]?.text ?? '';
   }
 }
@@ -186,7 +186,7 @@ export class OpenAIProvider implements AIProvider {
       throw new Error(`OpenAI error: ${response.status} ${response.statusText}`);
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as any;
     return data.choices?.[0]?.message?.content ?? '';
   }
 }
