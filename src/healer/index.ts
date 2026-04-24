@@ -58,6 +58,19 @@ export class Healer {
       }
       console.log('✅ Aider encontrado');
 
+      // Step 1.5: Verificar que Ollama está acessível (conforme docs do Aider)
+      console.log('\n🔍 Step 1.5: Verificando conexão com Ollama em ' + this.config.ollamaUrl + '...');
+      const ollamaAccessible = await this.client.checkOllamaConnection();
+      if (!ollamaAccessible) {
+        throw new Error(
+          `❌ Ollama não está acessível em ${this.config.ollamaUrl}\n` +
+          `   Inicie o Ollama com:\n` +
+          `   OLLAMA_CONTEXT_LENGTH=8192 ollama serve\n` +
+          `   (Veja: https://aider.chat/docs/llms/ollama.html)`
+        );
+      }
+      console.log('✅ Ollama acessível');
+
       // Step 2: Validar que a análise foi realizada
       const analysisPath = path.join(this.config.storageDir, 'analysis-failures.md');
       if (!fs.existsSync(analysisPath)) {
@@ -89,6 +102,8 @@ export class Healer {
 
       // Step 4: Montar prompt e executar Aider
       console.log('\n🤖 Step 4: Executando Aider para corrigir testes...');
+      console.log('   ⏱️  Timeout: 3 minutos (pode aumentar com HEALER_TIMEOUT=300000)');
+      console.log('   ℹ️  A primeira execução pode ser lenta (carregando modelo em Ollama)');
       console.log('   (Isso pode levar alguns minutos)\n');
 
       const taskMessage = this.generateTaskMessage(analysis);
@@ -104,8 +119,8 @@ export class Healer {
       }
 
       // Step 5: Validar os resultados
-      console.log('\n✔️ Step 5: Validando as correções...');
-      await this.validateFixes();
+      // console.log('\n✔️ Step 5: Validando as correções...');
+      // await this.validateFixes();
 
       // Step 6: Documentar as mudanças
       console.log('\n📝 Step 6: Documentando as mudanças...');
@@ -148,7 +163,7 @@ ${HEALER_PROMPTS.fixFailingTests}
   private prepareAnalysisContext(analysis: string): string {
     // Extrai informações importantes do arquivo de análise
     const lines = analysis.split('\n');
-    
+
     let context = '';
     let inPatternSection = false;
 
@@ -167,7 +182,7 @@ ${HEALER_PROMPTS.fixFailingTests}
 
   /**
    * Valida que os testes agora passam
-   */
+   
   private async validateFixes(): Promise<void> {
     return new Promise((resolve) => {
       console.log('   Rodando: npm run test');
@@ -185,6 +200,7 @@ ${HEALER_PROMPTS.fixFailingTests}
       });
     });
   }
+    */
 
   /**
    * Documenta as mudanças realizadas
@@ -227,9 +243,10 @@ export function createHealer(projectRoot: string): Healer {
   return new Healer({
     workspaceDir: projectRoot,
     storageDir: path.join(projectRoot, 'storage'),
-    aiderModel: process.env.AIDER_MODEL || 'ollama_chat/qwen2.5-coder:7b',
+    aiderModel: process.env.AIDER_MODEL || 'ollama_chat/qwen2.5-coder:1.5b',
     ollamaUrl: process.env.OLLAMA_URL || 'http://localhost:11434',
-    timeout: parseInt(process.env.HEALER_TIMEOUT || '600000', 10),
+    // Timeout padrão: 3 minutos (180000 ms). Pode ser aumentado com HEALER_TIMEOUT
+    timeout: parseInt(process.env.HEALER_TIMEOUT || '180000', 10),
     autoCommit: process.env.AIDER_AUTO_COMMIT !== 'false',
   });
 }

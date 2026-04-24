@@ -10,8 +10,14 @@ services:
     environment:
       - OLLAMA_HOST=0.0.0.0:11434
       - OLLAMA_ORIGINS="*"
-      # Context window grande para o Aider funcionar bem
-      - OLLAMA_CONTEXT_LENGTH=32768
+      # Reduzido para não fritar a CPU
+      - OLLAMA_CONTEXT_LENGTH=8192
+    
+    # Adicione a limitação numérica explícita (troque '4' pelo número de núcleos do seu processador, se preferir)
+    deploy:
+      resources:
+        limits:
+          cpus: '6'
     restart: unless-stopped
     network_mode: bridge
     healthcheck:

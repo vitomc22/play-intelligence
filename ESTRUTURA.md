@@ -96,7 +96,7 @@ Edite `.env`:
 ```env
 AI_PROVIDER=ollama
 OLLAMA_URL=http://localhost:11434
-OLLAMA_MODEL=qwen2.5-coder:7b
+OLLAMA_MODEL=qwen2.5-coder:1.5b
 AI_TIMEOUT_MS=300000
 AI_TEMPERATURE=0.2
 AI_MAX_TOKENS=2000
