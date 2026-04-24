@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Setup - Inicia Ollama + Qwen no Docker
+# Setup - Inicia Ollama + Qwen no Docker e instala Aider
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 set -e
 
 echo "╔════════════════════════════════════════════════════════╗"
-echo "║  Playwright Intelligence - Setup Ollama + Qwen 7B      ║"
+echo "║  Playwright Intelligence - Setup Ollama + Aider        ║"
 echo "╚════════════════════════════════════════════════════════╝"
 echo ""
 
@@ -41,15 +41,15 @@ fi
 echo "✅ docker-compose disponível"
 echo ""
 
-# ─── Inicia Ollama + OpenHands ─────────────────────────────
-echo "📦 Iniciando Ollama + OpenHands em Docker..."
-echo "   (Primeira execução: fará pull de ~3GB para Ollama + ~2GB para OpenHands)"
+# ─── Inicia Ollama ─────────────────────────────────────────
+echo "📦 Iniciando Ollama em Docker..."
+echo "   (Primeira execução: fará pull de ~3GB)"
 echo ""
 
-if docker compose up -d ollama openhands-agent; then
-    echo "✅ Containers iniciados"
+if docker compose up -d ollama; then
+    echo "✅ Container Ollama iniciado"
 else
-    echo "❌ Erro ao iniciar containers"
+    echo "❌ Erro ao iniciar container"
     exit 1
 fi
 
@@ -74,32 +74,6 @@ if [ $RETRY -eq $MAX_RETRIES ]; then
     echo "❌ Timeout: Ollama não respondeu após 60s"
     echo "   Execute: docker logs playwright-ollama"
     exit 1
-fi
-
-echo ""
-echo ""
-
-# ─── Aguarda OpenHands estar pronto ────────────────────────
-echo "⏳ Aguardando OpenHands estar pronto (até 120s)..."
-RETRY=0
-MAX_RETRIES=120
-
-while [ $RETRY -lt $MAX_RETRIES ]; do
-    if curl -s http://localhost:3000 > /dev/null 2>&1; then
-        echo ""
-        echo "✅ OpenHands está respondendo em http://localhost:3000"
-        break
-    fi
-    RETRY=$((RETRY + 1))
-    echo -n "."
-    sleep 1
-done
-
-if [ $RETRY -eq $MAX_RETRIES ]; then
-    echo ""
-    echo "⚠️  Aviso: OpenHands pode estar demorando para iniciar"
-    echo "   Execute: docker logs playwright-openhands-agent"
-    echo "   E aguarde ou reinicie: docker compose restart openhands-agent"
 fi
 
 echo ""
@@ -137,56 +111,37 @@ fi
 
 echo ""
 
-# ─── Testa configuração do OpenHands ───────────────────────
-echo "🧪 Validando configuração do OpenHands..."
-OPENHANDS_READY=$(curl -s http://localhost:3000 | grep -c "html\|OpenHands" || echo "0")
+# ─── Instala Aider ─────────────────────────────────────────
+echo "🔧 Verificando/Instalando Aider..."
 
-if [ "$OPENHANDS_READY" -gt 0 ]; then
-    echo "✅ OpenHands UI acessível em http://localhost:3000"
-    echo ""
-    echo "📝 Configuração do OpenHands:"
-    echo "   • LLM_PROVIDER: ollama"
-    echo "   • LLM_MODEL: ollama/qwen2.5-coder:7b"
-    echo "   • LLM_BASE_URL: http://ollama:11434"
-    echo "   • WORKSPACE_BASE: $(pwd)"
+if type aider > /dev/null 2>&1; then
+    echo "✅ Aider já está instalado: $(aider --version 2>/dev/null || echo 'versão desconhecida')"
 else
-    echo "⚠️  OpenHands UI pode estar inicializando"
-    echo "   Aguarde alguns segundos e acesse: http://localhost:3000"
-fi
-
-echo ""
-
-# ─── Testa conexão com Ollama ──────────────────────────────
-echo "🧪 Testando conexão com Ollama..."
-if curl -s -X POST http://localhost:11434/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "qwen2.5-coder:7b",
-    "messages": [{"role": "user", "content": "oi"}],
-    "stream": false
-  }' | grep -q "assistant"; then
-    echo "✅ Ollama respondendo corretamente!"
-else
-    echo "⚠️  Resposta inesperada. Verifique com: curl http://localhost:11434/api/tags"
-fi
-
-echo ""
-
-# ─── Testa configuração do OpenHands ───────────────────────
-echo "🧪 Validando configuração do OpenHands..."
-OPENHANDS_READY=$(curl -s http://localhost:3000 | grep -c "html\|OpenHands" || echo "0")
-
-if [ "$OPENHANDS_READY" -gt 0 ]; then
-    echo "✅ OpenHands UI acessível em http://localhost:3000"
-    echo ""
-    echo "📝 Configuração do OpenHands:"
-    echo "   • LLM_PROVIDER: ollama"
-    echo "   • LLM_MODEL: ollama/qwen2.5-coder:7b"
-    echo "   • LLM_BASE_URL: http://ollama:11434"
-    echo "   • WORKSPACE_BASE: $(pwd)"
-else
-    echo "⚠️  OpenHands UI pode estar inicializando"
-    echo "   Aguarde alguns segundos e acesse: http://localhost:3000"
+    echo "📦 Instalando aider-chat via pip..."
+    
+    if type pipx > /dev/null 2>&1; then
+        echo "   Usando pipx (isolado)..."
+        pipx install aider-chat
+    elif type pip > /dev/null 2>&1; then
+        echo "   Usando pip..."
+        pip install --user aider-chat
+    elif type pip3 > /dev/null 2>&1; then
+        echo "   Usando pip3..."
+        pip3 install --user aider-chat
+    else
+        echo "⚠️  pip/pipx não encontrado!"
+        echo "   Instale manualmente: pip install aider-chat"
+        echo "   Ou: pipx install aider-chat"
+    fi
+    
+    # Verifica se instalou
+    if type aider > /dev/null 2>&1; then
+        echo "✅ Aider instalado com sucesso!"
+    else
+        echo "⚠️  Aider pode ter sido instalado mas não está no PATH"
+        echo "   Tente adicionar ~/.local/bin ao PATH:"
+        echo '   export PATH="$HOME/.local/bin:$PATH"'
+    fi
 fi
 
 echo ""
@@ -205,20 +160,18 @@ echo ""
 echo "  3. Analisar com IA (Ollama):"
 echo "     npm run ai:analyze"
 echo ""
-echo "  4. 🆕 Corrigir testes automaticamente (OpenHands):"
+echo "  4. 🆕 Corrigir testes automaticamente (Aider):"
 echo "     npm run ai:heal"
 echo ""
 echo "📋 Comandos úteis:"
 echo ""
 echo "  Ver status:      docker compose ps"
 echo "  Ver logs Ollama: docker logs playwright-ollama -f"
-echo "  Ver logs OpenHands: docker logs playwright-openhands-agent -f"
 echo "  Parar tudo:      docker compose down"
 echo "  Reiniciar:       docker compose restart"
 echo ""
-echo "🌐 Acessar interfaces:"
+echo "🌐 Interfaces:"
 echo ""
-echo "  OpenHands:  http://localhost:3000"
 echo "  Ollama API: http://localhost:11434"
 echo ""
 echo "📚 Documentação:"

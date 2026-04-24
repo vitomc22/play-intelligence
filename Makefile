@@ -1,4 +1,4 @@
-.PHONY: help setup start stop logs health test analyze
+.PHONY: help setup start stop logs health test analyze heal
 
 help:
 	@echo "╔═══════════════════════════════════════════════════════╗"
@@ -17,6 +17,7 @@ help:
 	@echo "  make analyze    - Analisar falhas com IA"
 	@echo "  make suggest    - Sugerir novos testes"
 	@echo "  make fragility  - Identificar testes frágeis"
+	@echo "  make heal       - Corrigir testes com Aider"
 	@echo ""
 
 setup:
@@ -49,5 +50,8 @@ suggest:
 
 fragility:
 	@npm run ai:fragility
+
+heal:
+	@npm run ai:heal
 
 .DEFAULT_GOAL := help

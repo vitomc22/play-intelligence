@@ -186,10 +186,10 @@ async function healthCheck() {
 }
 
 /**
- * Healer: Usa OpenHands para corrigir testes automaticamente
+ * Healer: Usa Aider para corrigir testes automaticamente
  */
 async function healTests() {
-  console.log('\n🏥 Iniciando Healer com OpenHands...');
+  console.log('\n🏥 Iniciando Healer com Aider...');
 
   try {
     const projectRoot = process.cwd();
@@ -219,7 +219,7 @@ Comandos disponíveis:
     Identifica testes frágeis (flaky tests)
 
   npx ts-node src/cli.ts heal
-    🆕 Usa OpenHands para corrigir testes automaticamente
+    🆕 Usa Aider para corrigir testes automaticamente
     (Requer que 'npm run ai:analyze' tenha sido executado primeiro)
 
   npx ts-node src/cli.ts health-check

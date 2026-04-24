@@ -1,29 +1,21 @@
 /**
- * Prompts para o OpenHands - Agente de Correção de Testes
- * Esses prompts orientam o agente na correção automática de testes falhos
+ * Prompts para o Aider - Agente de Correção de Testes
+ * Esses prompts orientam o Aider na correção automática de testes falhos
  */
 
 export const HEALER_PROMPTS = {
   /**
-   * Prompt principal para o OpenHands corrigir testes
+   * Prompt principal para o Aider corrigir testes
    * Baseado na análise de falhas já realizada
    */
   fixFailingTests: `
-Você é um especialista em testes automatizados com Playwright e vai atuar como um agente de IA (OpenHands) para corrigir testes falhos automaticamente.
+Você é um especialista em testes automatizados com Playwright. Corrija os testes falhos automaticamente.
 
 ## Contexto
 Você recebeu uma análise de testes que falharam. Sua tarefa é:
 1. Entender os padrões de falha descritos
-2. Localizar os testes no código
-3. Aplicar correções específicas
-4. Executar os testes novamente para validar
-
-## Instruções
-- Analise cada padrão de falha fornecido
-- Para cada falha, implemente a correção recomendada no código-fonte
-- Use as melhores práticas do Playwright
-- Sempre execute os testes após corrigir para validar
-- Documente as mudanças realizadas
+2. Aplicar as correções recomendadas no código-fonte
+3. Manter as melhores práticas do Playwright
 
 ## Padrões de Falha Comuns no Playwright
 
@@ -51,12 +43,6 @@ Você recebeu uma análise de testes que falharam. Sua tarefa é:
 ## Arquivos a Modificar
 - \`tests/**/*.spec.ts\` - Testes do Playwright
 - \`playwright.config.ts\` - Configurações globais
-
-## Após as Correções
-1. Execute: \`npm run test\`
-2. Verifique se todos os testes passam
-3. Se houver novas falhas, repita o processo
-4. Documente as mudanças em um commit
 
 ## Responda em Português
 Mantenha clareza técnica mas em português.

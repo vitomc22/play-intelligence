@@ -1,5 +1,3 @@
-
-
 services:
   # ─── Ollama: Modelo local (Qwen 7B) ─────────────────────
   ollama:
@@ -11,45 +9,18 @@ services:
       - ollama_data:/root/.ollama
     environment:
       - OLLAMA_HOST=0.0.0.0:11434
+      - OLLAMA_ORIGINS="*"
+      # Context window grande para o Aider funcionar bem
+      - OLLAMA_CONTEXT_LENGTH=32768
     restart: unless-stopped
+    network_mode: bridge
     healthcheck:
-      test: ["CMD", "ollama", "list"]
+      test: [ "CMD", "ollama", "list" ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-    networks:
-      - playwright-net
-
-  # ─── OpenHands: Agent de IA para engenharia de software ──────────────
-  openhands-agent:
-    image: ghcr.io/all-hands-ai/openhands:main # ✅ Endereço correto
-    container_name: playwright-openhands-agent
-    ports:
-      - "3000:3000"      # Frontend interativo do OpenHands
-    environment:
-      - LLM_PROVIDER=ollama
-      - LLM_MODEL=ollama/qwen2.5-coder:7b
-      # Como estão na mesma rede Docker, usamos o nome do serviço 'ollama' diretamente
-      - LLM_BASE_URL=http://ollama:11434
-      # Define o diretório atual como a raiz do projeto para o agente
-      - WORKSPACE_BASE=${PWD}
-    volumes:
-      # O socket do Docker é OBRIGATÓRIO para o OpenHands subir sandboxes de execução
-      - /var/run/docker.sock:/var/run/docker.sock
-      # Mapeia a pasta local para dentro do container do agente
-      - ${PWD}:/opt/workspace_base
-    depends_on:
-      ollama:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - playwright-net
 
 volumes:
   ollama_data:
     driver: local
-
-networks:
-  playwright-net:
-    driver: bridge

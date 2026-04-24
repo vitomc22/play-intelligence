@@ -12,9 +12,9 @@ graph TD
     
     D -->|Responde| E["📝 Análise de Falhas<br/><code>storage/analysis-failures.md</code>"]
     
-    E -->|Passado para| F["🏥 Healer - OpenHands<br/><code>src/healer/</code>"]
+    E -->|Passado para| F["🏥 Healer - Aider<br/><code>src/healer/</code>"]
     
-    F -->|Instrui agente| G["🤖 OpenHands Agent<br/>Sandbox Executável"]
+    F -->|Executa via CLI| G["🤖 Aider<br/>Edição de Código com IA"]
     
     G -->|Corrige| A
     
@@ -51,10 +51,10 @@ Análise inteligente com IA local:
 - **ai-client.ts**: Suporta Ollama, Anthropic, OpenAI
 - **prompts.ts**: Prompts estruturados para análise técnica
 
-### 3. **Healer** (NOVO - `src/healer/`)
-Correção automática de testes com OpenHands:
-- **openhands-client.ts**: Cliente REST para o agente
-- **healer.ts**: Orquestração do processo completo
+### 3. **Healer** (`src/healer/`)
+Correção automática de testes com Aider:
+- **aider-client.ts**: Cliente CLI para executar o Aider como processo filho
+- **index.ts**: Orquestração do processo completo
 - **prompts.ts**: Instruções para o agente corrigir
 
 ### 4. **Storage** (`storage/`)
@@ -83,12 +83,13 @@ npm run ai:analyze
 # ↓ Salva em analysis-failures.md
 ```
 
-### Phase 3️⃣: Correção Automática (NOVO!)
+### Phase 3️⃣: Correção Automática
 ```bash
 npm run ai:heal
 # ↓ Healer lê analysis-failures.md
-# ↓ Envia tarefa ao OpenHands
-# ↓ Agente corrige testes automaticamente
+# ↓ Identifica arquivos de teste
+# ↓ Executa Aider com instrução de correção
+# ↓ Aider edita os arquivos automaticamente
 # ↓ Valida correções
 # ↓ Salva relatório
 ```
@@ -126,9 +127,9 @@ npm run ai:heal
 └────┬───────────────────────────────┘
      │
 ┌────▼────────────────────────────────┐
-│  🤖 AI Layer (Docker)               │
-│  • Ollama (Local)                    │
-│  • OpenHands (Sandbox Agent)         │
+│  🤖 AI Layer                        │
+│  • Ollama (Local LLM - Docker)      │
+│  • Aider (CLI - Edição de código)   │
 └─────────────────────────────────────┘
 ```
 
@@ -141,13 +142,10 @@ services:
   ollama:
     # Modelo local: Qwen 2.5 Coder 7B
     # Porta: 11434
-    # Uso: Análise & insights
-    
-  openhands-agent:
-    # Agente de IA para engenharia
-    # Porta: 3000 (web) + sandbox
-    # Uso: Correção automática de testes
+    # Uso: Análise & insights + backend do Aider
 ```
+
+> **Nota**: O Aider roda diretamente no host (via `pip install aider-chat`), não precisa de container Docker.
 
 ---
 
@@ -171,16 +169,15 @@ Ollama analisa padrões:
       ↓
 Storage/analysis-failures.md
       ↓
-Healer envia ao OpenHands:
+Healer executa Aider:
   ✓ Lê análise
-  ✓ Monta instruções
-  ✓ Envia tarefa
+  ✓ Monta instrução
+  ✓ Passa arquivos de teste ao Aider
       ↓
-OpenHands executa:
-  ✓ Localiza código
-  ✓ Aplica correções
-  ✓ Roda testes
-  ✓ Valida resultado
+Aider edita código:
+  ✓ Analisa instrução
+  ✓ Modifica arquivos diretamente
+  ✓ Commita alterações (se auto-commit ativo)
       ↓
 Storage/healing-report.md
       ↓
@@ -197,7 +194,7 @@ Storage/healing-report.md
 | **Runtime** | Node.js + TypeScript | 5.4+ |
 | **Reporter** | Custom (Playwright API) | - |
 | **IA Local** | Ollama + Qwen | 2.5-coder:7b |
-| **Agente** | OpenHands | main |
+| **Agente** | Aider | latest (pip) |
 | **Container** | Docker Compose | - |
 
 ---
@@ -219,17 +216,19 @@ HEALER_TIMEOUT=600000
 AI_TEMPERATURE=0.2
 AI_MAX_TOKENS=2000
 
-# OpenHands
-OPENHANDS_URL=http://localhost:3000
+# Aider
+AIDER_MODEL=ollama_chat/qwen2.5-coder:7b
+AIDER_AUTO_COMMIT=true
 ```
 
 ### `setup-ollama.sh`
 ```bash
 # Setup automático:
 # 1. Docker install (se necessário)
-# 2. docker-compose up -d
+# 2. docker-compose up -d ollama
 # 3. ollama pull qwen2.5-coder:7b
-# 4. npm install
+# 4. pip install aider-chat
+# 5. npm install
 ```
 
 ---

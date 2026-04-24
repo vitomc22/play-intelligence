@@ -40,3 +40,4 @@ playwright/.auth/
 # Logs
 logs/
 *.log
+.aider*

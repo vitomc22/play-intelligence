@@ -17,6 +17,12 @@ play-intelligence/
 │   ├── config.ts                     # Configuração centralizada
 │   └── index.ts                      # Entry point (exports)
 │
+│   ├── healer/                       # Correção automática com Aider
+│   │   ├── aider-client.ts           # Cliente CLI para o Aider
+│   │   ├── index.ts                  # Orquestrador de correção
+│   │   ├── prompts.ts                # Instruções para o Aider
+│   │   └── README.md                 # Documentação do Healer
+│
 ├── storage/                          # Dados gerados (ignorado pelo git)
 │   ├── context.md                    # Contexto de falhas
 │   ├── system-map.json               # Mapa de cobertura
@@ -51,7 +57,7 @@ play-intelligence/
 - **prompts.ts**: Prompts estruturados para análise
 
 ### `/src` - CLI e Configuração
-- **cli.ts**: Comandos: `analyze`, `suggest-tests`, `fragility`, `health-check`
+- **cli.ts**: Comandos: `analyze`, `suggest-tests`, `fragility`, `heal`, `health-check`
 - **config.ts**: Carrega e valida configurações do `.env`
 - **index.ts**: Export público dos componentes
 
@@ -80,6 +86,7 @@ npm run test  # Roda testes e coleta dados automaticamente
 npm run ai:analyze       # Analisa falhas
 npm run ai:suggest       # Sugere novos testes
 npm run ai:fragility     # Identifica testes frágeis
+npm run ai:heal          # Corrige testes automaticamente com Aider
 npm run ai:health        # Verifica saúde da IA
 ```
 

@@ -1,7 +1,7 @@
 /**
  * Healer: Agente de Correção Automática de Testes
  *
- * Orquestra o OpenHands para:
+ * Orquestra o Aider para:
  * 1. Ler a análise de falhas já realizada
  * 2. Identificar padrões e causa raiz
  * 3. Corrigir os testes automaticamente
@@ -10,23 +10,32 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { OpenHandsClient } from './openhands-client';
+import { exec } from 'child_process';
+import { AiderClient } from './aider-client';
 import { HEALER_PROMPTS } from './prompts';
 
 export interface HealerConfig {
   workspaceDir: string;
   storageDir: string;
-  openhandsUrl: string;
+  aiderModel: string;
+  ollamaUrl: string;
   timeout: number;
+  autoCommit: boolean;
 }
 
 export class Healer {
-  private client: OpenHandsClient;
+  private client: AiderClient;
   private config: HealerConfig;
 
   constructor(config: HealerConfig) {
     this.config = config;
-    this.client = new OpenHandsClient(config.openhandsUrl, config.timeout);
+    this.client = new AiderClient({
+      model: config.aiderModel,
+      ollamaUrl: config.ollamaUrl,
+      workspaceDir: config.workspaceDir,
+      timeout: config.timeout,
+      autoCommit: config.autoCommit,
+    });
   }
 
   /**
@@ -37,7 +46,19 @@ export class Healer {
     console.log('═'.repeat(60));
 
     try {
-      // Step 1: Validar que a análise foi realizada
+      // Step 1: Verificar que o Aider está instalado
+      console.log('\n🔍 Step 1: Verificando instalação do Aider...');
+      const aiderInstalled = await this.client.checkInstallation();
+      if (!aiderInstalled) {
+        throw new Error(
+          '❌ Aider não está instalado.\n' +
+          '   Instale com: pip install aider-chat\n' +
+          '   Ou: pipx install aider-chat'
+        );
+      }
+      console.log('✅ Aider encontrado');
+
+      // Step 2: Validar que a análise foi realizada
       const analysisPath = path.join(this.config.storageDir, 'analysis-failures.md');
       if (!fs.existsSync(analysisPath)) {
         throw new Error(
@@ -46,37 +67,41 @@ export class Healer {
         );
       }
 
-      console.log('\n📋 Step 1: Lendo análise de falhas...');
+      console.log('\n📋 Step 2: Lendo análise de falhas...');
       const analysis = fs.readFileSync(analysisPath, 'utf-8');
       console.log(`✅ Análise carregada (${analysis.length} caracteres)`);
 
-      // Step 2: Preparar contexto para o OpenHands
-      console.log('\n🔍 Step 2: Analisando padrões de falha...');
-      const analysisContext = this.prepareAnalysisContext(analysis);
+      // Step 3: Identificar arquivos de teste
+      console.log('\n📁 Step 3: Identificando arquivos de teste...');
+      const testFiles = this.client.findTestFiles();
 
-      // Step 3: Enviar tarefa ao OpenHands
-      console.log('\n🤖 Step 3: Enviando tarefa ao OpenHands...');
-      const taskDescription = this.generateTaskDescription(analysisContext);
-      
-      const task = await this.client.submitTask({
-        title: 'Corrigir testes falhando com Playwright',
-        description: taskDescription,
-        workspaceDir: this.config.workspaceDir,
-      });
-
-      console.log(`✅ Tarefa enviada: ${task.message}`);
-
-      // Step 4: Aguardar conclusão
-      console.log('\n⏳ Step 4: Aguardando o agente executar as correções...');
-      console.log('   (Isso pode levar alguns minutos)');
-      
-      const completedTask = await this.client.waitForTask(task.data?.id);
-
-      if (completedTask.status === 'failed') {
-        throw new Error(`❌ Tarefa falhou: ${completedTask.error}`);
+      // Inclui também o playwright.config.ts como arquivo editável
+      const playwrightConfig = 'playwright.config.ts';
+      const filesToEdit = [...testFiles];
+      if (fs.existsSync(path.join(this.config.workspaceDir, playwrightConfig))) {
+        filesToEdit.push(playwrightConfig);
       }
 
-      console.log('✅ Agente concluiu as correções');
+      if (filesToEdit.length === 0) {
+        throw new Error('❌ Nenhum arquivo de teste encontrado em tests/**/*.spec.ts');
+      }
+      console.log(`✅ ${filesToEdit.length} arquivo(s) encontrado(s): ${filesToEdit.join(', ')}`);
+
+      // Step 4: Montar prompt e executar Aider
+      console.log('\n🤖 Step 4: Executando Aider para corrigir testes...');
+      console.log('   (Isso pode levar alguns minutos)\n');
+
+      const taskMessage = this.generateTaskMessage(analysis);
+      const result = await this.client.runTask(taskMessage, filesToEdit);
+
+      if (!result.success) {
+        console.error('\n⚠️  Aider terminou com erros.');
+        if (result.errorOutput) {
+          console.error('Detalhes:', result.errorOutput.substring(0, 500));
+        }
+      } else {
+        console.log('\n✅ Aider concluiu as correções');
+      }
 
       // Step 5: Validar os resultados
       console.log('\n✔️ Step 5: Validando as correções...');
@@ -84,7 +109,7 @@ export class Healer {
 
       // Step 6: Documentar as mudanças
       console.log('\n📝 Step 6: Documentando as mudanças...');
-      await this.documentChanges(completedTask.result || '');
+      await this.documentChanges(result.output);
 
       console.log('\n✅ Healer finalizado com sucesso!');
       console.log('═'.repeat(60));
@@ -93,6 +118,28 @@ export class Healer {
       console.error('\n❌ Erro no Healer:', error.message);
       process.exit(1);
     }
+  }
+
+  /**
+   * Gera a mensagem/instrução para o Aider
+   */
+  private generateTaskMessage(analysis: string): string {
+    const analysisContext = this.prepareAnalysisContext(analysis);
+
+    return `
+Corrija os testes automatizados Playwright baseado nesta análise de falhas:
+
+${analysisContext}
+
+## Instruções
+1. Analise os padrões de falha acima
+2. Implemente as correções recomendadas nos arquivos de teste
+3. Respeite as melhores práticas do Playwright
+4. Prefira melhorar locators a aumentar waits
+5. Aumente timeouts apenas quando necessário
+
+${HEALER_PROMPTS.fixFailingTests}
+    `.trim();
   }
 
   /**
@@ -119,58 +166,30 @@ export class Healer {
   }
 
   /**
-   * Gera descrição da tarefa para o OpenHands
-   */
-  private generateTaskDescription(analysisContext: string): string {
-    return `
-Você vai corrigir os testes automaticamente baseado nesta análise:
-
-${analysisContext}
-
-## Instruções
-1. Analise os padrões de falha acima
-2. Localize os testes em tests/**/*.spec.ts
-3. Implemente as correções recomendadas
-4. Execute os testes: npm run test
-5. Valide que agora passam
-
-## Constraints
-- Respeite as melhores práticas do Playwright
-- Aumente timeouts apenas quando necessário
-- Prefira melhorar locators a aumentar waits
-- Documente qualquer mudança significativa
-
-${HEALER_PROMPTS.fixFailingTests}
-    `.trim();
-  }
-
-  /**
    * Valida que os testes agora passam
    */
   private async validateFixes(): Promise<void> {
-    try {
+    return new Promise((resolve) => {
       console.log('   Rodando: npm run test');
-      
-      const result = await this.client.executeCommand(
-        'npm run test',
-        this.config.workspaceDir
-      );
 
-      if (result.includes('passed') || result.includes('✓')) {
-        console.log('✅ Testes passando após correções!');
-      } else if (result.includes('failed') || result.includes('✗')) {
-        console.log('⚠️  Alguns testes ainda falhando, mas agente pode ter resolvido alguns.');
-      }
-
-    } catch (error: any) {
-      console.warn('⚠️  Não foi possível validar imediatamente, mas agente executou.');
-    }
+      exec('npm run test', {
+        cwd: this.config.workspaceDir,
+        timeout: this.config.timeout,
+      }, (error, stdout, stderr) => {
+        if (stdout.includes('passed') || stdout.includes('✓')) {
+          console.log('✅ Testes passando após correções!');
+        } else if (error || stdout.includes('failed') || stdout.includes('✗')) {
+          console.log('⚠️  Alguns testes ainda falhando, mas o Aider pode ter resolvido alguns.');
+        }
+        resolve();
+      });
+    });
   }
 
   /**
    * Documenta as mudanças realizadas
    */
-  private async documentChanges(agentResult: string): Promise<void> {
+  private async documentChanges(aiderOutput: string): Promise<void> {
     const timestamp = new Date().toISOString().split('T')[0];
     const reportPath = path.join(
       this.config.storageDir,
@@ -180,11 +199,11 @@ ${HEALER_PROMPTS.fixFailingTests}
     const report = `# Relatório de Correção de Testes (Healer)
 
 **Data:** ${new Date().toLocaleString('pt-BR')}
-**Agente:** OpenHands
-**Modelo:** Qwen 2.5 Coder (via Ollama)
+**Agente:** Aider
+**Modelo:** ${this.config.aiderModel}
 
 ## Resultado
-${agentResult || 'Agente processou a tarefa com sucesso. Verifique o status em http://localhost:3000'}
+${aiderOutput ? aiderOutput.substring(0, 3000) : 'Aider processou a tarefa com sucesso.'}
 
 ## Próximos Passos
 1. Verifique as mudanças: \`git diff\`
@@ -208,7 +227,9 @@ export function createHealer(projectRoot: string): Healer {
   return new Healer({
     workspaceDir: projectRoot,
     storageDir: path.join(projectRoot, 'storage'),
-    openhandsUrl: process.env.OPENHANDS_URL || 'http://localhost:3000',
+    aiderModel: process.env.AIDER_MODEL || 'ollama_chat/qwen2.5-coder:7b',
+    ollamaUrl: process.env.OLLAMA_URL || 'http://localhost:11434',
     timeout: parseInt(process.env.HEALER_TIMEOUT || '600000', 10),
+    autoCommit: process.env.AIDER_AUTO_COMMIT !== 'false',
   });
 }

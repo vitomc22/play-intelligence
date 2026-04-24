@@ -1,21 +1,22 @@
 # 🏥 Healer - Correção Automática de Testes
 
-O **Healer** é um agente de correção automática de testes que usa o **OpenHands** (agente de IA) para executar correções de forma autônoma.
+O **Healer** é um agente de correção automática de testes que usa o **Aider** (ferramenta CLI de edição de código com IA) para executar correções de forma autônoma.
 
 ## Como Funciona
 
-1. **Lê a análise**: Carrega o arquivo `storage/analysis-failures.md` gerado pelo analyzer
-2. **Prepara contexto**: Extrai padrões de falha e causa raiz
-3. **Envia ao OpenHands**: Comunica via API REST com o agente em Docker
-4. **Aguarda execução**: Agente corrige os testes automaticamente
+1. **Verifica Aider**: Confirma que o Aider está instalado no sistema
+2. **Lê a análise**: Carrega o arquivo `storage/analysis-failures.md` gerado pelo analyzer
+3. **Identifica testes**: Busca arquivos `tests/**/*.spec.ts` e `playwright.config.ts`
+4. **Executa Aider**: Passa os arquivos e a instrução de correção ao Aider via CLI
 5. **Valida resultado**: Executa testes para confirmar correções
 6. **Documenta**: Salva relatório em `storage/healing-report-YYYY-MM-DD.md`
 
 ## Pré-requisitos
 
-1. ✅ Testes já foram executados: `npm run test`
-2. ✅ Análise foi realizada: `npm run ai:analyze`
-3. ✅ OpenHands está rodando em Docker: `bash setup-ollama.sh`
+1. ✅ **Aider instalado**: `pip install aider-chat` ou `pipx install aider-chat`
+2. ✅ **Ollama rodando**: `docker-compose up -d ollama`
+3. ✅ Testes já foram executados: `npm run test`
+4. ✅ Análise foi realizada: `npm run ai:analyze`
 
 ## Uso
 
@@ -29,17 +30,18 @@ npm run ai:heal
 🏥 Iniciando Healer - Correção Automática de Testes
 ════════════════════════════════════════════════════
 
-📋 Step 1: Lendo análise de falhas...
+🔍 Step 1: Verificando instalação do Aider...
+✅ Aider encontrado
+
+📋 Step 2: Lendo análise de falhas...
 ✅ Análise carregada (5234 caracteres)
 
-🔍 Step 2: Analisando padrões de falha...
+📁 Step 3: Identificando arquivos de teste...
+✅ 3 arquivo(s) encontrado(s): tests/example.spec.ts, playwright.config.ts
 
-🤖 Step 3: Enviando tarefa ao OpenHands...
-✅ Tarefa enviada: Corrigir testes falhando com Playwright
-
-⏳ Step 4: Aguardando o agente executar as correções...
+🤖 Step 4: Executando Aider para corrigir testes...
    (Isso pode levar alguns minutos)
-✅ Agente concluiu as correções
+✅ Aider concluiu as correções
 
 ✔️ Step 5: Validando as correções...
    Rodando: npm run test
@@ -54,27 +56,27 @@ npm run ai:heal
 
 ## Arquivos
 
-### `openhands-client.ts`
-Cliente REST para comunicar com o agente OpenHands.
+### `aider-client.ts`
+Cliente CLI para executar o Aider como processo filho.
 
 **Métodos principais:**
-- `submitTask(task)` - Envia uma tarefa de correção
-- `executeCommand(cmd, dir)` - Executa comando no sandbox
-- `waitForTask(taskId)` - Aguarda conclusão com polling
+- `runTask(message, files)` - Executa Aider com uma instrução e lista de arquivos
+- `findTestFiles()` - Busca arquivos `*.spec.ts` no diretório `tests/`
+- `checkInstallation()` - Verifica se o Aider está instalado
 
-### `healer.ts`
+### `index.ts`
 Orquestrador do processo de correção.
 
 **Fluxo:**
 1. `healFailingTests()` - Método principal
-2. Lê análise do storage
-3. Gera descrição da tarefa
-4. Envia ao OpenHands
-5. Aguarda conclusão
-6. Documenta resultado
+2. Verifica instalação do Aider
+3. Lê análise do storage
+4. Identifica arquivos de teste
+5. Executa Aider com a instrução
+6. Valida e documenta resultado
 
 ### `prompts.ts`
-Instruções para o OpenHands realizar as correções.
+Instruções para o Aider realizar as correções.
 
 **Prompts inclusos:**
 - `fixFailingTests` - Instruções principais para correção
@@ -86,26 +88,30 @@ Instruções para o OpenHands realizar as correções.
 
 ### Variáveis de Ambiente (`.env`)
 ```env
-# OpenHands
-OPENHANDS_URL=http://localhost:3000
+# Aider
+AIDER_MODEL=ollama_chat/qwen2.5-coder:7b
+AIDER_AUTO_COMMIT=true
 
-# Timeout para aguardar agente
+# Ollama (backend do Aider)
+OLLAMA_URL=http://localhost:11434
+
+# Timeout para aguardar execução
 HEALER_TIMEOUT=600000  # 10 minutos
 ```
 
 ## Fluxo de Correção
 
 ```
-├─ Step 1: Valida análise
-├─ Step 2: Prepara contexto
-│   └─ Extrai padrões de falha
-├─ Step 3: Envia tarefa
-│   ├─ Monta descrição
-│   └─ POST /api/tasks
-├─ Step 4: Aguarda conclusão
-│   └─ Polling: GET /api/tasks/{id}
+├─ Step 1: Verifica Aider
+│   └─ aider --version
+├─ Step 2: Valida análise
+│   └─ Lê analysis-failures.md
+├─ Step 3: Identifica arquivos
+│   └─ Busca tests/**/*.spec.ts
+├─ Step 4: Executa Aider
+│   └─ aider --message "..." --model ... arquivo1 arquivo2
 ├─ Step 5: Valida testes
-│   └─ Executa: npm run test
+│   └─ npm run test
 └─ Step 6: Documenta
     └─ Salva healing-report.md
 ```
@@ -147,13 +153,16 @@ npm run test
 
 ## Troubleshooting
 
-### "OpenHands não está rodando"
+### "Aider não está instalado"
 ```bash
-# Verificar se está em Docker
-docker ps | grep openhands
+# Instalar via pip
+pip install aider-chat
 
-# Se não estiver, iniciar
-bash setup-ollama.sh
+# Ou via pipx (isolado)
+pipx install aider-chat
+
+# Verificar instalação
+aider --version
 ```
 
 ### "Análise não encontrada"
@@ -165,10 +174,19 @@ npm run ai:analyze
 npm run ai:heal
 ```
 
-### "Timeout ao aguardar agente"
+### "Timeout ao executar Aider"
 - Aumentar `HEALER_TIMEOUT` no `.env`
-- Verificar logs: `docker logs playwright-openhands-agent`
-- Pode ser que o modelo Ollama está processando lentamente
+- Verificar se Ollama está rodando: `curl http://localhost:11434/api/tags`
+- Pode ser que o modelo está processando lentamente
+
+### "Ollama não responde"
+```bash
+# Verificar se está rodando
+docker ps | grep ollama
+
+# Reiniciar
+docker-compose restart ollama
+```
 
 ## Integrações Futuras
 
