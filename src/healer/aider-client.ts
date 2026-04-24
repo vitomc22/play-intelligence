@@ -9,7 +9,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 export interface AiderConfig {
-  /** Modelo LLM no formato do Aider (ex: ollama_chat/qwen2.5-coder:1.5b) */
+  /** Modelo LLM no formato do Aider (ex: ollama_chat/qwen2.5-coder:7b) */
   model: string;
   /** URL base do Ollama (ex: http://localhost:11434) */
   ollamaUrl: string;

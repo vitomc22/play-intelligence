@@ -89,7 +89,7 @@ Instruções para o Aider realizar as correções.
 ### Variáveis de Ambiente (`.env`)
 ```env
 # Aider
-AIDER_MODEL=ollama_chat/qwen2.5-coder:1.5b
+AIDER_MODEL=ollama_chat/qwen2.5-coder:7b
 AIDER_AUTO_COMMIT=true
 
 # Ollama (backend do Aider)

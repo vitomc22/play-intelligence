@@ -28,7 +28,7 @@ async function analyze() {
   const ai = AIProviderFactory.create();
 
   const provider = process.env.AI_PROVIDER ?? 'ollama';
-  const model = process.env.OLLAMA_MODEL ?? 'qwen2.5-coder:1.5b';
+  const model = process.env.OLLAMA_MODEL ?? 'qwen2.5-coder:7b';
   console.log(`🤖 Provider: ${provider}${provider === 'ollama' ? ` (${model})` : ''}\n`);
 
   fs.mkdirSync(REPORTS_DIR, { recursive: true });

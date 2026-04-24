@@ -26,7 +26,7 @@ export class OllamaProvider implements AIProvider {
   private maxTokens: number;
 
   constructor(config: Partial<AIConfig> = {}) {
-    this.model = config.model || process.env.OLLAMA_MODEL || 'qwen2.5-coder:1.5b';
+    this.model = config.model || process.env.OLLAMA_MODEL || 'qwen2.5-coder:7b';
     this.baseUrl = config.baseUrl || process.env.OLLAMA_URL || 'http://localhost:11434';
     this.timeout = config.timeout || 400000; // 5 min para Ryzen processar
     this.temperature = config.temperature ?? 0.2; // Baixo para respostas técnicas

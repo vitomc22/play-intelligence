@@ -206,7 +206,7 @@ Storage/healing-report.md
 # AI Provider
 AI_PROVIDER=ollama
 OLLAMA_URL=http://localhost:11434
-OLLAMA_MODEL=qwen2.5-coder:1.5b
+OLLAMA_MODEL=qwen2.5-coder:7b
 
 # Timeouts (ms)
 AI_TIMEOUT_MS=300000
@@ -217,7 +217,7 @@ AI_TEMPERATURE=0.2
 AI_MAX_TOKENS=2000
 
 # Aider
-AIDER_MODEL=ollama_chat/qwen2.5-coder:1.5b
+AIDER_MODEL=ollama_chat/qwen2.5-coder:7b
 AIDER_AUTO_COMMIT=true
 ```
 
@@ -226,7 +226,7 @@ AIDER_AUTO_COMMIT=true
 # Setup automático:
 # 1. Docker install (se necessário)
 # 2. docker-compose up -d ollama
-# 3. ollama pull qwen2.5-coder:1.5b
+# 3. ollama pull qwen2.5-coder:7b
 # 4. pip install aider-chat
 # 5. npm install
 ```

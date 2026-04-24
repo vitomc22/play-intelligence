@@ -15,7 +15,7 @@ export const config = {
   // ─── Ollama (Local) ──────────────────────────────────────
   ollama: {
     url: process.env.OLLAMA_URL || 'http://localhost:11434',
-    model: process.env.OLLAMA_MODEL || 'qwen2.5-coder:1.5b',
+    model: process.env.OLLAMA_MODEL || 'qwen2.5-coder:7b',
   },
 
   // ─── Anthropic ───────────────────────────────────────────

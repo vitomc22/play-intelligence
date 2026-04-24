@@ -243,7 +243,7 @@ export function createHealer(projectRoot: string): Healer {
   return new Healer({
     workspaceDir: projectRoot,
     storageDir: path.join(projectRoot, 'storage'),
-    aiderModel: process.env.AIDER_MODEL || 'ollama_chat/qwen2.5-coder:1.5b',
+    aiderModel: process.env.AIDER_MODEL || 'ollama_chat/qwen2.5-coder:7b',
     ollamaUrl: process.env.OLLAMA_URL || 'http://localhost:11434',
     // Timeout padrão: 3 minutos (180000 ms). Pode ser aumentado com HEALER_TIMEOUT
     timeout: parseInt(process.env.HEALER_TIMEOUT || '180000', 10),
