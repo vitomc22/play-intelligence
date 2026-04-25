@@ -76,7 +76,7 @@ cp .env.example .env
 AI_PROVIDER=ollama
 OLLAMA_URL=http://localhost:11434
 OLLAMA_MODEL=gemma4:e2b
-AI_TIMEOUT_MS=300000  # 5 min (CPU precisa processar)
+AI_TIMEOUT_MS=900000  # 5 min (CPU precisa processar)
 AI_TEMPERATURE=0.2
 AI_MAX_TOKENS=2000
 ```

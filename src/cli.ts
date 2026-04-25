@@ -1,4 +1,9 @@
 #!/usr/bin/env node
+/**
+ * @fileoverview CLI Entry Point.
+ * Provides a command-line interface for interacting with the Playwright Intelligence tools.
+ * Supports analysis, test suggestion, fragility reporting, and automated healing.
+ */
 
 import * as fs from 'fs';
 import * as path from 'path';
@@ -7,6 +12,10 @@ import { PROMPTS } from './analyzer/prompts';
 import { config, validateConfig, printConfig } from './config';
 import { createHealer } from './healer';
 
+/**
+ * Main execution loop for the CLI.
+ * Parses command-line arguments and routes to the appropriate function.
+ */
 async function main() {
   const args = process.argv.slice(2);
   const command = args[0] || 'help';
@@ -44,7 +53,9 @@ async function main() {
 }
 
 /**
- * Análise de falhas: identifica padrões e causa raiz
+ * Analyzes recent test failures.
+ * Reads failure context and system map, then sends them to the AI for pattern identification.
+ * Results are displayed in the console and saved as a Markdown report.
  */
 async function analyzeFailures() {
   const contextPath = config.paths.context;
@@ -95,7 +106,7 @@ _💡 Dica: Use 'npm run ai:heal' para tentar corrigir as falhas acima automatic
 }
 
 /**
- * Sugestão de novos testes baseado em cobertura
+ * Generates suggestions for new test cases based on the current system map and identified coverage gaps.
  */
 async function suggestTests() {
   const systemMapPath = config.paths.systemMap;
@@ -142,7 +153,7 @@ _💡 Dica: Copie e cole os testes acima em novos arquivos na pasta 'tests/'._
 }
 
 /**
- * Identifica testes frágeis (flaky tests)
+ * Identifies fragile or "flaky" tests by analyzing historical failure data and system mapping.
  */
 async function identifyFragility() {
   const contextPath = config.paths.context;
@@ -193,7 +204,8 @@ _💡 Dica: Foque em corrigir os seletores dos componentes listados como crític
 }
 
 /**
- * Health check: verifica se IA está acessível
+ * Performs a health check on the configured AI provider.
+ * Verifies connectivity and model availability.
  */
 async function healthCheck() {
   console.log('\n🏥 Verificando saúde da IA...');
@@ -203,7 +215,7 @@ async function healthCheck() {
       provider: config.ai.provider,
       model: config.ollama.model,
       baseUrl: config.ollama.url,
-      timeout: 30000, // 30s timeout para health check
+      timeout: 120000, // 2 min timeout para health check (CPU local)
       temperature: config.ai.temperature,
     });
 
@@ -224,7 +236,8 @@ async function healthCheck() {
 }
 
 /**
- * Healer: Usa Aider para corrigir testes automaticamente
+ * Launches the automated test healing process using the Healer module and Aider agent.
+ * Requires a prior analysis run to provide context.
  */
 async function healTests() {
   console.log('\n🏥 Iniciando Healer com Aider...');
@@ -239,6 +252,9 @@ async function healTests() {
   }
 }
 
+/**
+ * Prints the help message to the console, listing available commands and setup instructions.
+ */
 function printHelp() {
   console.log(`
 ╔════════════════════════════════════════════════════════════════╗

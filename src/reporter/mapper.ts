@@ -1,3 +1,7 @@
+/**
+ * @fileoverview System Mapper Reporter.
+ * Tracks visited routes, actions performed, and assertions made to build a system coverage map.
+ */
 import fs from 'fs';
 import path from 'path';
 import type {
@@ -9,28 +13,51 @@ import type {
   FullConfig,
 } from '@playwright/test/reporter';
 
+/**
+ * Represents metadata and coverage statistics for a specific application route.
+ */
 interface RouteEntry {
+  /** The route path or URL. */
   route: string;
+  /** The primary locator/selector used on this route. */
   selector: string | null;
+  /** List of actions performed on this route (click, fill, etc.). */
   actions: string[];
+  /** List of assertions performed on this route (toBeVisible, etc.). */
   assertions: string[];
+  /** List of test files that cover this route. */
   testedBy: string[];
+  /** ISO timestamp of the last time this route was exercised. */
   lastSeen: string;
+  /** Number of times tests on this route have failed. */
   failureCount: number;
+  /** Number of times tests on this route have passed. */
   successCount: number;
 }
 
+/**
+ * The complete map of the system's tested surface area.
+ */
 interface SystemMap {
   updatedAt: string;
   totalRoutes: number;
+  /** Coverage metrics keyed by route. */
   coverage: Record<string, CoverageEntry>;
+  /** Detailed route data keyed by route path. */
   routes: Record<string, RouteEntry>;
 }
 
+/**
+ * Coverage metrics for a specific route.
+ */
 interface CoverageEntry {
+  /** Overall coverage score (0-100). */
   score: number;
+  /** Total number of unique actions tested. */
   actionCount: number;
+  /** Total number of unique assertions tested. */
   assertionCount: number;
+  /** Identified gaps in testing for this route. */
   gaps: string[];
 }
 
@@ -46,18 +73,36 @@ const COVERAGE_GAPS: Record<string, string[]> = {
   'pagination': ['next page', 'previous page', 'last page'],
 };
 
+/**
+ * Custom Playwright Reporter that builds a system map and coverage report.
+ */
 export class SystemMapper implements Reporter {
   private map: SystemMap;
+  /** Temporary storage to track the current route of each active test. */
   private currentRoute: Record<string, string> = {}; // testId → route
 
+  /**
+   * Initializes a new instance of SystemMapper and loads existing map data if available.
+   */
   constructor() {
     this.map = this.loadOrCreate();
   }
 
+  /**
+   * Called when the test run begins.
+   * @param _config The full Playwright configuration.
+   * @param _suite The root suite of tests.
+   */
   onBegin(_config: FullConfig, _suite: Suite): void {
     fs.mkdirSync(STORAGE_DIR, { recursive: true });
   }
 
+  /**
+   * Called when a test step begins. Used to detect navigation to new routes.
+   * @param test The test case metadata.
+   * @param _result The result of the test execution so far.
+   * @param step The step that is starting.
+   */
   onStepBegin(test: TestCase, _result: TestResult, step: TestStep): void {
     if (step.category !== 'pw:api') return;
 
@@ -67,6 +112,12 @@ export class SystemMapper implements Reporter {
     }
   }
 
+  /**
+   * Called when a test step ends. Extracts actions, assertions, and selectors.
+   * @param test The test case metadata.
+   * @param _result The result of the test execution so far.
+   * @param step The step that has finished.
+   */
   onStepEnd(test: TestCase, _result: TestResult, step: TestStep): void {
     if (step.category !== 'pw:api') return;
 
@@ -91,6 +142,11 @@ export class SystemMapper implements Reporter {
     entry.lastSeen = new Date().toISOString();
   }
 
+  /**
+   * Called when a test case ends. Updates success/failure counts for the route.
+   * @param test The test case metadata.
+   * @param result The result of the test execution.
+   */
   onTestEnd(test: TestCase, result: TestResult): void {
     const route = this.currentRoute[test.id];
     if (!route || !this.map.routes[route]) return;
@@ -105,6 +161,9 @@ export class SystemMapper implements Reporter {
     delete this.currentRoute[test.id];
   }
 
+  /**
+   * Called when all tests have finished. Calculates final coverage and persists the map.
+   */
   onEnd(): void {
     this.map.updatedAt = new Date().toISOString();
     this.map.totalRoutes = Object.keys(this.map.routes).length;
@@ -124,6 +183,11 @@ export class SystemMapper implements Reporter {
 
   // ─── helpers ───────────────────────────────────────────────
 
+  /**
+   * Extracts a route or URL from a step title.
+   * Handles page.goto and "Navigate to" step titles.
+   * @private
+   */
   private extractRoute(title: string): string | null {
     // Matches page.goto("/") or Navigate to "/"
     const match = title.match(/(?:page\.goto|Navigate to).*?(['"]?)([^\s"']+)\1/);
@@ -143,16 +207,28 @@ export class SystemMapper implements Reporter {
     return null;
   }
 
+  /**
+   * Extracts an action keyword from a step title.
+   * @private
+   */
   private extractAction(title: string): string | null {
     const found = ACTION_KEYWORDS.find((k) => title.toLowerCase().includes(k));
     return found ?? null;
   }
 
+  /**
+   * Extracts an assertion keyword from a step title.
+   * @private
+   */
   private extractAssertion(title: string): string | null {
     const found = ASSERTION_KEYWORDS.find((k) => title.includes(k));
     return found ?? null;
   }
 
+  /**
+   * Extracts a selector or locator from a step title.
+   * @private
+   */
   private extractSelector(title: string): string | null {
     const patterns = [
       /getByRole\([^)]+\)/,
@@ -168,6 +244,10 @@ export class SystemMapper implements Reporter {
     return null;
   }
 
+  /**
+   * Calculates coverage scores and identifies gaps for all routes in the map.
+   * @private
+   */
   private calculateCoverage(): Record<string, CoverageEntry> {
     const coverage: Record<string, CoverageEntry> = {};
 
@@ -196,6 +276,10 @@ export class SystemMapper implements Reporter {
     return coverage;
   }
 
+  /**
+   * Creates a new, empty route entry.
+   * @private
+   */
   private createRouteEntry(route: string, test: TestCase): RouteEntry {
     return {
       route,
@@ -209,6 +293,10 @@ export class SystemMapper implements Reporter {
     };
   }
 
+  /**
+   * Loads the existing system map from disk or creates a new one.
+   * @private
+   */
   private loadOrCreate(): SystemMap {
     if (fs.existsSync(MAP_FILE)) {
       return JSON.parse(fs.readFileSync(MAP_FILE, 'utf-8'));
@@ -216,6 +304,10 @@ export class SystemMapper implements Reporter {
     return { updatedAt: '', totalRoutes: 0, coverage: {}, routes: {} };
   }
 
+  /**
+   * Persists the current system map to disk in JSON format.
+   * @private
+   */
   private persist(): void {
     fs.writeFileSync(MAP_FILE, JSON.stringify(this.map, null, 2));
   }

@@ -1,32 +1,42 @@
 /**
- * Healer: Agente de Correção Automática de Testes
- *
- * Orquestra o Aider para:
- * 1. Ler a análise de falhas já realizada
- * 2. Identificar padrões e causa raiz
- * 3. Corrigir os testes automaticamente
- * 4. Validar as correções
+ * @fileoverview Healer Module.
+ * Orchestrates the automated test healing workflow using the Aider agent.
+ * The workflow includes reading AI analysis, identifying test files, and running Aider to apply fixes.
  */
-
 import * as fs from 'fs';
 import * as path from 'path';
-import { exec } from 'child_process';
 import { AiderClient } from './aider-client';
 import { HEALER_PROMPTS } from './prompts';
 
+/**
+ * Configuration for the Healer orchestrator.
+ */
 export interface HealerConfig {
+  /** Root directory of the project. */
   workspaceDir: string;
+  /** Directory where analysis and reports are stored. */
   storageDir: string;
+  /** The model identifier for Aider. */
   aiderModel: string;
+  /** The base URL for the Ollama API. */
   ollamaUrl: string;
+  /** Maximum execution time in milliseconds. */
   timeout: number;
+  /** Whether changes should be automatically committed. */
   autoCommit: boolean;
 }
 
+/**
+ * Orchestrator class for the automated test healing process.
+ */
 export class Healer {
   private client: AiderClient;
   private config: HealerConfig;
 
+  /**
+   * Creates an instance of Healer.
+   * @param config The configuration for the healing process.
+   */
   constructor(config: HealerConfig) {
     this.config = config;
     this.client = new AiderClient({
@@ -39,7 +49,14 @@ export class Healer {
   }
 
   /**
-   * Executa o processo completo de correção de testes
+   * Orchestrates the complete test healing workflow.
+   * 1. Validates Aider and Ollama availability.
+   * 2. Reads the failure analysis report.
+   * 3. Identifies test files to be edited.
+   * 4. Runs Aider to apply fixes.
+   * 5. Documents the changes made.
+   * 
+   * @throws {Error} If any step in the workflow fails.
    */
   async healFailingTests(): Promise<void> {
     console.log('\n🏥 Iniciando Healer - Correção Automática de Testes');
@@ -102,7 +119,7 @@ export class Healer {
 
       // Step 4: Montar prompt e executar Aider
       console.log('\n🤖 Step 4: Executando Aider para corrigir testes...');
-      console.log('   ⏱️  Timeout: 3 minutos (pode aumentar com HEALER_TIMEOUT=300000)');
+      console.log('   ⏱️  Timeout: 3 minutos (pode aumentar com HEALER_TIMEOUT=900000)');
       console.log('   ℹ️  A primeira execução pode ser lenta (carregando modelo em Ollama)');
       console.log('   (Isso pode levar alguns minutos)\n');
 
@@ -118,10 +135,6 @@ export class Healer {
         console.log('\n✅ Aider concluiu as correções');
       }
 
-      // Step 5: Validar os resultados
-      // console.log('\n✔️ Step 5: Validando as correções...');
-      // await this.validateFixes();
-
       // Step 6: Documentar as mudanças
       console.log('\n📝 Step 6: Documentando as mudanças...');
       await this.documentChanges(result.output);
@@ -136,7 +149,11 @@ export class Healer {
   }
 
   /**
-   * Gera a mensagem/instrução para o Aider
+   * Generates the structured task message for Aider.
+   * Combines failure analysis with healing instructions.
+   * @param analysis The content of the AI analysis report.
+   * @returns A formatted string instruction.
+   * @private
    */
   private generateTaskMessage(analysis: string): string {
     const analysisContext = this.prepareAnalysisContext(analysis);
@@ -158,7 +175,10 @@ ${HEALER_PROMPTS.fixFailingTests}
   }
 
   /**
-   * Prepara o contexto da análise para passar ao agente
+   * Extracts relevant snippets from the analysis report to minimize prompt noise.
+   * @param analysis The full content of the analysis report.
+   * @returns A condensed version of the analysis focused on failure patterns.
+   * @private
    */
   private prepareAnalysisContext(analysis: string): string {
     // Extrai informações importantes do arquivo de análise
@@ -181,29 +201,9 @@ ${HEALER_PROMPTS.fixFailingTests}
   }
 
   /**
-   * Valida que os testes agora passam
-   
-  private async validateFixes(): Promise<void> {
-    return new Promise((resolve) => {
-      console.log('   Rodando: npm run test');
-
-      exec('npm run test', {
-        cwd: this.config.workspaceDir,
-        timeout: this.config.timeout,
-      }, (error, stdout, stderr) => {
-        if (stdout.includes('passed') || stdout.includes('✓')) {
-          console.log('✅ Testes passando após correções!');
-        } else if (error || stdout.includes('failed') || stdout.includes('✗')) {
-          console.log('⚠️  Alguns testes ainda falhando, mas o Aider pode ter resolvido alguns.');
-        }
-        resolve();
-      });
-    });
-  }
-    */
-
-  /**
-   * Documenta as mudanças realizadas
+   * Generates a persistent Markdown report of the changes performed by the Healer.
+   * @param aiderOutput The console output from the Aider process.
+   * @private
    */
   private async documentChanges(aiderOutput: string): Promise<void> {
     const timestamp = new Date().toISOString().split('T')[0];
@@ -237,7 +237,10 @@ _Gerado automaticamente pelo Healer_
 }
 
 /**
- * Factory para criar instância do Healer com config padrão
+ * Factory function to create a new Healer instance with default configuration.
+ * Loads settings from environment variables.
+ * @param projectRoot The absolute path to the project's root directory.
+ * @returns A fully configured Healer instance.
  */
 export function createHealer(projectRoot: string): Healer {
   return new Healer({

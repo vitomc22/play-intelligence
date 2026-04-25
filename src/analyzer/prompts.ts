@@ -1,3 +1,11 @@
+/**
+ * @fileoverview Prompt templates for AI analysis and suggestions.
+ * These prompts define how the AI should interpret test failures and system maps.
+ */
+
+/**
+ * Collection of prompts for different AI analysis tasks.
+ */
 export const PROMPTS = {
   analyzeFailures: `
 Analise as falhas de testes Playwright abaixo e retorne um relatório em markdown com:

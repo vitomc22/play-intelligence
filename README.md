@@ -143,7 +143,7 @@ OLLAMA_MODEL=gemma4:e2b
 OLLAMA_URL=http://localhost:11434
 
 # Timeouts e Parâmetros
-AI_TIMEOUT_MS=300000
+AI_TIMEOUT_MS=900000
 AI_TEMPERATURE=0.2
 
 # Healer (Aider)

@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Failure Collector Reporter.
+ * Captures detailed information about test failures, including screenshots, traces, and network logs.
+ */
 import fs from 'fs';
 import path from 'path';
 import type {
@@ -9,6 +13,9 @@ import type {
   Suite,
 } from '@playwright/test/reporter';
 
+/**
+ * Represents a single network request captured during a test.
+ */
 interface NetworkEntry {
   url: string;
   method: string;
@@ -17,6 +24,9 @@ interface NetworkEntry {
   timestamp: string;
 }
 
+/**
+ * Detailed context for a test failure.
+ */
 interface FailureContext {
   id: number;
   timestamp: string;
@@ -35,14 +45,25 @@ const STORAGE_DIR = path.resolve(__dirname, '../../storage');
 const FAILURES_DIR = path.join(STORAGE_DIR, 'failures');
 const CONTEXT_FILE = path.join(STORAGE_DIR, 'context.md');
 
+/**
+ * Custom Playwright Reporter that collects detailed failure data for AI analysis.
+ */
 export class FailureCollector implements Reporter {
   private failureCount = 0;
   private runId: string;
 
+  /**
+   * Initializes a new instance of FailureCollector with a unique run ID.
+   */
   constructor() {
     this.runId = `run-${Date.now()}`;
   }
 
+  /**
+   * Called when the test run begins. Ensures the storage directories exist.
+   * @param _config The full Playwright configuration.
+   * @param _suite The root suite of tests.
+   */
   onBegin(_config: FullConfig, _suite: Suite): void {
     fs.mkdirSync(path.join(FAILURES_DIR, this.runId), { recursive: true });
 
@@ -54,6 +75,11 @@ export class FailureCollector implements Reporter {
     }
   }
 
+  /**
+   * Called when a test case ends. Collects data if the test failed or timed out.
+   * @param test The test case metadata.
+   * @param result The result of the test execution.
+   */
   onTestEnd(test: TestCase, result: TestResult): void {
     if (result.status !== 'failed' && result.status !== 'timedOut') return;
 
@@ -64,6 +90,10 @@ export class FailureCollector implements Reporter {
     this.persistTrace(result, ctx.id);
   }
 
+  /**
+   * Builds a structured FailureContext object from test data.
+   * @private
+   */
   private buildContext(test: TestCase, result: TestResult): FailureContext {
     const steps = result.steps.map((s: TestStep) => {
       const icon = s.error ? '❌' : '✅';
@@ -88,6 +118,10 @@ export class FailureCollector implements Reporter {
     };
   }
 
+  /**
+   * Appends the failure context to the context.md file in Markdown format.
+   * @private
+   */
   private persistMarkdown(ctx: FailureContext): void {
     const networkSection = ctx.network.length
       ? ctx.network
@@ -125,6 +159,10 @@ ${ctx.screenshotPath ? `### Screenshot\n![failure-${ctx.id}](${ctx.screenshotPat
     fs.appendFileSync(CONTEXT_FILE, block);
   }
 
+  /**
+   * Saves the test screenshot to the failures directory.
+   * @private
+   */
   private persistScreenshot(result: TestResult, id: number): void {
     const screenshot = result.attachments.find(
       (a) => a.name === 'screenshot' && a.contentType === 'image/png'
@@ -136,6 +174,10 @@ ${ctx.screenshotPath ? `### Screenshot\n![failure-${ctx.id}](${ctx.screenshotPat
     }
   }
 
+  /**
+   * Saves the Playwright execution trace to the failures directory.
+   * @private
+   */
   private persistTrace(result: TestResult, id: number): void {
     const trace = result.attachments.find(
       (a) => a.name === 'trace' && a.contentType === 'application/zip'
@@ -147,6 +189,9 @@ ${ctx.screenshotPath ? `### Screenshot\n![failure-${ctx.id}](${ctx.screenshotPat
     }
   }
 
+  /**
+   * Called when all tests have finished. Logs a summary to the console.
+   */
   onEnd(): void {
     if (this.failureCount > 0) {
       console.log(`\n🔴 [PWI] ${this.failureCount} falha(s) coletada(s) em ${CONTEXT_FILE}`);

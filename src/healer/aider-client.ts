@@ -1,54 +1,63 @@
 /**
- * Cliente para comunicar com Aider
- * Aider é uma ferramenta CLI de edição de código com IA
- * Roda como processo filho via child_process.spawn()
+ * @fileoverview Aider Client Module.
+ * Provides a wrapper around the Aider CLI tool for automated code editing with AI.
+ * Aider runs as a child process and communicates with the AI provider (usually Ollama).
  */
-
 import { spawn } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 
+/**
+ * Configuration for the Aider client.
+ */
 export interface AiderConfig {
-  /** Modelo LLM no formato do Aider (ex: ollama_chat/gemma4:e2b) */
+  /** The LLM model name in Aider's format (e.g., 'ollama_chat/gemma4:e2b'). */
   model: string;
-  /** URL base do Ollama (ex: http://localhost:11434) */
+  /** The base URL for the Ollama API. */
   ollamaUrl: string;
-  /** Diretório raiz do workspace */
+  /** The absolute path to the workspace root. */
   workspaceDir: string;
-  /** Timeout em ms para execução (padrão: 600000 = 10 min) */
+  /** Maximum execution time in milliseconds. */
   timeout: number;
-  /** Se true, Aider faz commit automático das alterações */
+  /** Whether Aider should automatically commit its changes to Git. */
   autoCommit: boolean;
 }
 
+/**
+ * The result of an Aider execution.
+ */
 export interface AiderResult {
-  /** Se o processo terminou com sucesso (exit code 0) */
+  /** True if Aider exited with a zero status code. */
   success: boolean;
-  /** Saída completa do stdout */
+  /** Full standard output of the Aider process. */
   output: string;
-  /** Saída de erro (stderr) */
+  /** Full standard error output of the Aider process. */
   errorOutput: string;
-  /** Código de saída do processo */
+  /** The numeric exit code of the process. */
   exitCode: number | null;
 }
 
 /**
- * Cliente para o Aider
- * Executa o Aider como processo filho para editar código automaticamente
+ * Client class for interacting with the Aider CLI.
  */
 export class AiderClient {
   private config: AiderConfig;
 
+  /**
+   * Creates an instance of AiderClient.
+   * @param config The configuration to use for all tasks.
+   */
   constructor(config: AiderConfig) {
     this.config = config;
   }
 
   /**
-   * Executa o Aider com uma mensagem/instrução e uma lista de arquivos
+   * Executes a specific task with Aider.
+   * Spawns a child process and captures its output.
    * 
-   * @param message - Instrução em linguagem natural para o Aider
-   * @param files - Lista de arquivos para o Aider editar (caminhos relativos ao workspace)
-   * @returns Resultado da execução
+   * @param message The natural language instruction for the AI.
+   * @param files List of relative file paths that Aider is allowed to edit.
+   * @returns A promise resolving to the execution result.
    */
   async runTask(message: string, files: string[]): Promise<AiderResult> {
     return new Promise((resolve, reject) => {
@@ -123,7 +132,11 @@ export class AiderClient {
   }
 
   /**
-   * Monta a lista de argumentos CLI para o Aider
+   * Constructs the command-line arguments for the Aider command.
+   * @param message The instruction for the AI.
+   * @param files The files to be modified.
+   * @returns An array of string arguments.
+   * @private
    */
   private buildArgs(message: string, files: string[]): string[] {
     // Converter timeout de ms para segundos para o Aider
@@ -153,8 +166,8 @@ export class AiderClient {
   }
 
   /**
-   * Encontra arquivos de teste no workspace
-   * Busca recursivamente por *.spec.ts em tests/
+   * Recursively finds all Playwright test files (*.spec.ts) in the workspace's tests/ directory.
+   * @returns An array of relative paths to test files.
    */
   findTestFiles(): string[] {
     const testsDir = path.join(this.config.workspaceDir, 'tests');
@@ -168,7 +181,8 @@ export class AiderClient {
   }
 
   /**
-   * Busca recursiva por arquivos .spec.ts
+   * Helper function to recursively walk a directory looking for spec files.
+   * @private
    */
   private walkDir(dir: string, results: string[]): void {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -183,7 +197,8 @@ export class AiderClient {
   }
 
   /**
-   * Verifica se o Aider está instalado e acessível
+   * Checks if the Aider CLI is installed and responsive.
+   * @returns A promise resolving to true if installed.
    */
   async checkInstallation(): Promise<boolean> {
     return new Promise((resolve) => {
@@ -202,8 +217,9 @@ export class AiderClient {
   }
 
   /**
-   * Verifica se Ollama está acessível na URL configurada
-   * A documentação do Aider recomenda aumentar OLLAMA_CONTEXT_LENGTH para 8192
+   * Validates the connection to the Ollama API.
+   * Checks for a 200 OK from /api/tags.
+   * @returns A promise resolving to true if reachable.
    */
   async checkOllamaConnection(): Promise<boolean> {
     try {

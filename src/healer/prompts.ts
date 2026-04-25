@@ -1,6 +1,6 @@
 /**
- * Prompts para o Aider - Agente de Correção de Testes
- * Esses prompts orientam o Aider na correção automática de testes falhos
+ * @fileoverview Prompt templates for the Aider-based test healer.
+ * These prompts guide the AI agent in identifying root causes and applying fixes to failing tests.
  */
 
 export const HEALER_PROMPTS = {

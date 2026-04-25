@@ -1,33 +1,50 @@
+/**
+ * @fileoverview Configuration module.
+ * Loads and validates environment variables and provides a centralized config object.
+ */
 import * as dotenv from 'dotenv';
 
 // Carrega .env
 dotenv.config();
 
+/**
+ * Centralized configuration object for the entire application.
+ */
 export const config = {
-  // ─── IA ───────────────────────────────────────────────────
+  /**
+   * AI Provider configuration.
+   */
   ai: {
     provider: (process.env.AI_PROVIDER || 'ollama') as 'ollama' | 'anthropic' | 'openai',
-    timeout: parseInt(process.env.AI_TIMEOUT_MS || '300000', 10),
+    timeout: parseInt(process.env.AI_TIMEOUT_MS || '1800000', 10),
     temperature: parseFloat(process.env.AI_TEMPERATURE || '0.2'),
   },
 
-  // ─── Ollama (Local) ──────────────────────────────────────
+  /**
+   * Local Ollama configuration.
+   */
   ollama: {
     url: process.env.OLLAMA_URL || 'http://localhost:11434',
     model: process.env.OLLAMA_MODEL || 'gemma4:e2b',
   },
 
-  // ─── Anthropic ───────────────────────────────────────────
+  /**
+   * Anthropic provider configuration.
+   */
   anthropic: {
     apiKey: process.env.ANTHROPIC_API_KEY || '',
   },
 
-  // ─── OpenAI ──────────────────────────────────────────────
+  /**
+   * OpenAI provider configuration.
+   */
   openai: {
     apiKey: process.env.OPENAI_API_KEY || '',
   },
 
-  // ─── Paths ───────────────────────────────────────────────
+  /**
+   * File system paths for data storage and context.
+   */
   paths: {
     storage: process.env.STORAGE_DIR || './storage',
     context: process.env.STORAGE_DIR ? `${process.env.STORAGE_DIR}/context.md` : './storage/context.md',
@@ -37,19 +54,25 @@ export const config = {
     cache: process.env.CACHE_DIR || './storage/cache',
   },
 
-  // ─── Logging ──────────────────────────────────────────────
+  /**
+   * Logging configuration.
+   */
   logging: {
     level: (process.env.LOG_LEVEL || 'info') as 'error' | 'warn' | 'info' | 'debug',
   },
 
-  // ─── Cache ───────────────────────────────────────────────
+  /**
+   * Cache settings.
+   */
   cache: {
     enabled: process.env.ENABLE_CACHE !== 'false',
   },
 };
 
 /**
- * Valida a configuração na inicialização
+ * Validates the current configuration against required parameters.
+ * Exits the process if critical settings are missing or invalid.
+ * @throws {Error} If validation fails (though currently it uses process.exit).
  */
 export function validateConfig(): void {
   const errors: string[] = [];
@@ -83,7 +106,8 @@ export function validateConfig(): void {
 }
 
 /**
- * Exibe as configurações ativas (sem expor secrets)
+ * Prints the active configuration to the console (excluding secrets).
+ * Used for debugging and status checks.
  */
 export function printConfig(): void {
   console.log('\n📋 Configuração Ativa:');
