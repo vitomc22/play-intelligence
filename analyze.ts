@@ -23,12 +23,17 @@ async function analyze() {
     process.exit(1);
   }
 
+  const systemMapContent = fs.readFileSync(MAP_FILE, 'utf-8');
+  const systemMap = JSON.parse(systemMapContent);
+
+  if (systemMap.totalRoutes === 0) {
+    console.warn('⚠️  Aviso: Nenhuma rota mapeada no system-map.json. A análise de cobertura será limitada.');
+  }
   const context = fs.readFileSync(CONTEXT_FILE, 'utf-8');
-  const systemMap = fs.readFileSync(MAP_FILE, 'utf-8');
   const ai = AIProviderFactory.create();
 
   const provider = process.env.AI_PROVIDER ?? 'ollama';
-  const model = process.env.OLLAMA_MODEL ?? 'qwen2.5-coder:7b';
+  const model = process.env.OLLAMA_MODEL ?? 'gemma4:e2b';
   console.log(`🤖 Provider: ${provider}${provider === 'ollama' ? ` (${model})` : ''}\n`);
 
   fs.mkdirSync(REPORTS_DIR, { recursive: true });
@@ -52,16 +57,16 @@ async function analyze() {
 
   // ── 2. Fragilidade e cobertura ───────────────────────────
   process.stdout.write('🗺️  Analisando cobertura e fragilidade...');
-  const fragilityAnalysis = await ai.analyze(PROMPTS.identifyFragility, systemMap);
+  const fragilityAnalysis = await ai.analyze(PROMPTS.identifyFragility, systemMapContent);
   process.stdout.write(' ✅\n');
   report += `# Cobertura e Fragilidade\n\n${fragilityAnalysis}\n\n---\n\n`;
 
   // ── 3. Sugestão de novos testes ──────────────────────────
-  const lowCoverageRoutes = getLowCoverageRoutes(systemMap);
+  const lowCoverageRoutes = getLowCoverageRoutes(systemMapContent);
 
   if (lowCoverageRoutes.length > 0) {
     process.stdout.write(`🧪 Sugerindo testes para ${lowCoverageRoutes.length} rota(s) com baixa cobertura...`);
-    const suggestions = await ai.analyze(PROMPTS.suggestTests, systemMap);
+    const suggestions = await ai.analyze(PROMPTS.suggestTests, systemMapContent);
     process.stdout.write(' ✅\n');
     report += `# Sugestões de Novos Testes\n\n${suggestions}\n\n---\n\n`;
   } else {

@@ -28,19 +28,19 @@ docker run -d \
   ollama/ollama
 ```
 
-### 1.3 Baixar Qwen 7B
+### 1.3 Baixar qgemma4:e2b
 ```bash
 # Via docker
-docker exec ollama ollama pull qwen2.5-coder:7b
+docker exec ollama ollama pull gemma4:e2b
 
 # Ou direto se tiver Ollama instalado
-ollama pull qwen2.5-coder:7b
+ollama pull gemma4:e2b
 ```
 
 ### 1.4 Testar Conexão
 ```bash
 curl http://localhost:11434/api/tags
-# Deve retornar: {"models":[{"name":"qwen2.5-coder:7b",...}]}
+# Deve retornar: {"models":[{"name":"gemma4:e2b",...}]}
 ```
 
 ---
@@ -75,7 +75,7 @@ cp .env.example .env
 ```env
 AI_PROVIDER=ollama
 OLLAMA_URL=http://localhost:11434
-OLLAMA_MODEL=qwen2.5-coder:7b
+OLLAMA_MODEL=gemma4:e2b
 AI_TIMEOUT_MS=300000  # 5 min (CPU precisa processar)
 AI_TEMPERATURE=0.2
 AI_MAX_TOKENS=2000
@@ -100,7 +100,7 @@ npm install dotenv  # Para carregar .env
        {
          "title": "Qwen Local",
          "provider": "ollama",
-         "model": "qwen2.5-coder:7b",
+         "model": "gemma4:e2b",
          "apiBase": "http://localhost:11434"
        }
      ]
@@ -128,7 +128,7 @@ npx ts-node cli.ts analyze
 
 Saída esperada:
 ```
-📡 Conectando ao Ollama (qwen2.5-coder:7b)...
+📡 Conectando ao Ollama (gemma4:e2b)...
 ⏳ Processando... (pode levar 1-5 min)
 ✅ Análise concluída!
 ```
@@ -164,7 +164,7 @@ ollama pull qwen2.5:3b  # 3B = ~5-10 tokens/s
 
 ### ❌ "Modelo não encontrado"
 ```bash
-docker exec ollama ollama pull qwen2.5-coder:7b
+docker exec ollama ollama pull gemma4:e2b
 ```
 
 ### ❌ "Conexão recusada"

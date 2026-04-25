@@ -9,13 +9,12 @@ export const config = {
     provider: (process.env.AI_PROVIDER || 'ollama') as 'ollama' | 'anthropic' | 'openai',
     timeout: parseInt(process.env.AI_TIMEOUT_MS || '300000', 10),
     temperature: parseFloat(process.env.AI_TEMPERATURE || '0.2'),
-    maxTokens: parseInt(process.env.AI_MAX_TOKENS || '2000', 10),
   },
 
   // ─── Ollama (Local) ──────────────────────────────────────
   ollama: {
     url: process.env.OLLAMA_URL || 'http://localhost:11434',
-    model: process.env.OLLAMA_MODEL || 'qwen2.5-coder:7b',
+    model: process.env.OLLAMA_MODEL || 'gemma4:e2b',
   },
 
   // ─── Anthropic ───────────────────────────────────────────
@@ -89,9 +88,8 @@ export function validateConfig(): void {
 export function printConfig(): void {
   console.log('\n📋 Configuração Ativa:');
   console.log(`   Provider: ${config.ai.provider}`);
-  console.log(`   Modelo: ${
-    config.ai.provider === 'ollama' ? config.ollama.model : config.ai.provider
-  }`);
+  console.log(`   Modelo: ${config.ai.provider === 'ollama' ? config.ollama.model : config.ai.provider
+    }`);
   console.log(`   Timeout: ${config.ai.timeout}ms`);
   console.log(`   Temperatura: ${config.ai.temperature}`);
   console.log(`   Storage: ${config.paths.storage}\n`);

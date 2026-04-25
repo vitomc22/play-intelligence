@@ -13,7 +13,6 @@ export interface AIConfig {
   apiKey?: string;
   timeout?: number;
   temperature?: number;
-  maxTokens?: number;
 }
 
 // ─── Ollama (local, gratuito, Ryzen 7 3ª gen + 16GB RAM) ────
@@ -23,14 +22,12 @@ export class OllamaProvider implements AIProvider {
   private model: string;
   private timeout: number;
   private temperature: number;
-  private maxTokens: number;
 
   constructor(config: Partial<AIConfig> = {}) {
-    this.model = config.model || process.env.OLLAMA_MODEL || 'qwen2.5-coder:7b';
+    this.model = config.model || process.env.OLLAMA_MODEL || 'gemma4:e2b';
     this.baseUrl = config.baseUrl || process.env.OLLAMA_URL || 'http://localhost:11434';
     this.timeout = config.timeout || 400000; // 5 min para Ryzen processar
     this.temperature = config.temperature ?? 0.2; // Baixo para respostas técnicas
-    this.maxTokens = config.maxTokens || 3000;
   }
 
   async analyze(prompt: string, context: string): Promise<string> {
@@ -50,15 +47,18 @@ export class OllamaProvider implements AIProvider {
               role: 'system',
               content:
                 'Você é um especialista em qualidade de software e testes automatizados com Playwright. ' +
-                'Analise os dados fornecidos e responda em português. ' +
-                'Seja objetivo, técnico e forneça exemplos de código TypeScript quando relevante.',
+                'Antes de fornecer a resposta final, você deve realizar um raciocínio interno profundo (thinking). ' +
+                'Analise os logs, o mapa do sistema e as falhas passo a passo, identificando conexões não óbvias. ' +
+                'Responda em português, sendo objetivo, técnico e forneça exemplos de código TypeScript quando relevante.',
             },
             {
               role: 'user',
               content: `${prompt}\n\n---\n\n${context}`,
             },
           ],
-          temperature: this.temperature,
+          options: {
+            temperature: this.temperature,
+          },
         }),
         signal: controller.signal,
       });
@@ -97,12 +97,10 @@ export class OllamaProvider implements AIProvider {
 export class AnthropicProvider implements AIProvider {
   private apiKey: string;
   private model: string;
-  private maxTokens: number;
 
   constructor(config: Partial<AIConfig> = {}) {
     this.apiKey = config.apiKey || process.env.ANTHROPIC_API_KEY || '';
     this.model = config.model || 'claude-3-5-sonnet-20241022';
-    this.maxTokens = config.maxTokens || 3000;
 
     if (!this.apiKey) {
       throw new Error('ANTHROPIC_API_KEY não definida');
@@ -119,7 +117,6 @@ export class AnthropicProvider implements AIProvider {
       },
       body: JSON.stringify({
         model: this.model,
-        max_tokens: this.maxTokens,
         messages: [
           {
             role: 'user',
@@ -143,12 +140,10 @@ export class AnthropicProvider implements AIProvider {
 export class OpenAIProvider implements AIProvider {
   private apiKey: string;
   private model: string;
-  private maxTokens: number;
 
   constructor(config: Partial<AIConfig> = {}) {
     this.apiKey = config.apiKey || process.env.OPENAI_API_KEY || '';
     this.model = config.model || 'gpt-4o-mini';
-    this.maxTokens = config.maxTokens || 2000;
 
     if (!this.apiKey) {
       throw new Error('OPENAI_API_KEY não definida');
@@ -164,7 +159,6 @@ export class OpenAIProvider implements AIProvider {
       },
       body: JSON.stringify({
         model: this.model,
-        max_tokens: this.maxTokens,
         temperature: 0.2,
         messages: [
           {

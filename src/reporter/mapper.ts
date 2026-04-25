@@ -125,8 +125,22 @@ export class SystemMapper implements Reporter {
   // ─── helpers ───────────────────────────────────────────────
 
   private extractRoute(title: string): string | null {
-    const match = title.match(/page\.goto.*?(\/[^\s"']+)/);
-    return match ? match[1].split('?')[0] : null;
+    // Matches page.goto("/") or Navigate to "/"
+    const match = title.match(/(?:page\.goto|Navigate to).*?(['"]?)([^\s"']+)\1/);
+    if (match) {
+      const url = match[2];
+      try {
+        if (url.startsWith('http')) {
+          const u = new URL(url);
+          // Return the full origin + path for external, or just path for local
+          return u.pathname === '/' ? u.origin : u.origin + u.pathname;
+        }
+        return url.split('?')[0];
+      } catch {
+        return url.split('?')[0];
+      }
+    }
+    return null;
   }
 
   private extractAction(title: string): string | null {

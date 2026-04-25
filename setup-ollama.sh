@@ -79,14 +79,14 @@ fi
 echo ""
 echo ""
 
-# ─── Baixa modelo Qwen ─────────────────────────────────────
-echo "🤖 Baixando Qwen 2.5 Coder 7B..."
+# ─── Baixa modelo gemma4:e2b ─────────────────────────────────────
+echo "🤖 Baixando gemma4:e2b..."
 echo "   (Primeira vez: ~5GB, pode levar 10-20 min)"
 echo ""
 
-if docker exec playwright-ollama ollama pull qwen2.5-coder:7b; then
+if docker exec playwright-ollama ollama pull gemma4:e2b; then
     echo ""
-    echo "✅ Qwen 2.5 Coder 7B baixado!"
+    echo "✅ gemma4:e2b baixado!"
 else
     echo ""
     echo "❌ Erro ao baixar modelo"
@@ -100,7 +100,7 @@ echo "🧪 Testando conexão com Ollama..."
 if curl -s -X POST http://localhost:11434/api/chat \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "qwen2.5-coder:7b",
+    "model": "gemma4:e2b",
     "messages": [{"role": "user", "content": "oi"}],
     "stream": false
   }' | grep -q "assistant"; then

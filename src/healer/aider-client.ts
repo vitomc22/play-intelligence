@@ -9,7 +9,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 export interface AiderConfig {
-  /** Modelo LLM no formato do Aider (ex: ollama_chat/qwen2.5-coder:7b) */
+  /** Modelo LLM no formato do Aider (ex: ollama_chat/gemma4:e2b) */
   model: string;
   /** URL base do Ollama (ex: http://localhost:11434) */
   ollamaUrl: string;
@@ -128,7 +128,7 @@ export class AiderClient {
   private buildArgs(message: string, files: string[]): string[] {
     // Converter timeout de ms para segundos para o Aider
     const aiderTimeoutSeconds = Math.ceil(this.config.timeout / 1000);
-    
+
     const args: string[] = [
       '--message', message,
       '--model', this.config.model,
@@ -209,13 +209,13 @@ export class AiderClient {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
-      
+
       try {
         const response = await fetch(`${this.config.ollamaUrl}/api/tags`, {
           signal: controller.signal,
         });
         clearTimeout(timeoutId);
-        
+
         if (response.ok) {
           console.log(`✅ Ollama respondeu de ${this.config.ollamaUrl}`);
           return true;

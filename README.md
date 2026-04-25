@@ -35,7 +35,7 @@ npm run test:intelligence
 docker-compose up -d
 
 # 2. Aguarde 30s e baixe o modelo
-docker exec playwright-ollama ollama pull qwen2.5-coder:7b
+docker exec playwright-ollama ollama pull gemma4:e2b
 
 # 3. Instale dependências
 npm install
@@ -70,7 +70,7 @@ make stop
 curl -fsSL https://ollama.com/install.sh | sh
 
 # Baixar modelo
-ollama pull qwen2.5-coder:7b
+ollama pull gemma4:e2b
 
 # Rodar Ollama
 ollama serve
@@ -161,7 +161,7 @@ AI_PROVIDER=ollama
 
 # Ollama
 OLLAMA_URL=http://localhost:11434
-OLLAMA_MODEL=qwen2.5-coder:7b
+OLLAMA_MODEL=gemma4:e2b
 
 # Timeouts (em ms)
 AI_TIMEOUT_MS=300000        # 5 min (para Ryzen processar)
@@ -183,7 +183,7 @@ ENABLE_CACHE=true
 
 | Modelo | Tamanho | Qualidade | Velocidade |
 |--------|--------|-----------|-----------|
-| **qwen2.5-coder:7b** | ~5GB RAM | ⭐⭐⭐⭐⭐ | ~30s/resposta |
+| **gemma4:e2b** | ~5GB RAM | ⭐⭐⭐⭐⭐ | ~30s/resposta |
 | qwen2.5:7b | ~5GB RAM | ⭐⭐⭐⭐ | ~30s/resposta |
 | llama2:7b | ~4GB RAM | ⭐⭐⭐ | ~30s/resposta |
 | mistral:7b | ~4GB RAM | ⭐⭐⭐⭐ | ~30s/resposta |
@@ -197,7 +197,7 @@ ENABLE_CACHE=true
 ### ❌ "Modelo não encontrado"
 ```bash
 # Baixe manualmente
-docker exec playwright-ollama ollama pull qwen2.5-coder:7b
+docker exec playwright-ollama ollama pull gemma4:e2b
 
 # Ou verifique quais modelos estão disponíveis
 curl http://localhost:11434/api/tags
@@ -342,7 +342,7 @@ npm run pwi:reset
 | Variável | Default | Descrição |
 |---|---|---|
 | `AI_PROVIDER` | `ollama` | Provider de IA: `ollama` ou `anthropic` |
-| `OLLAMA_MODEL` | `qwen2.5-coder:7b` | Modelo Ollama a usar |
+| `OLLAMA_MODEL` | `gemma4:e2b` | Modelo Ollama a usar |
 | `OLLAMA_URL` | `http://localhost:11434` | URL da API Ollama |
 | `ANTHROPIC_API_KEY` | — | Chave Anthropic (se usar fallback cloud) |
 
@@ -350,7 +350,7 @@ npm run pwi:reset
 
 | Modelo | RAM | Quando usar |
 |---|---|---|
-| `qwen2.5-coder:7b` | ~6 GB | **Recomendado** — especializado em código |
+| `gemma4:e2b` | ~6 GB | **Recomendado** — especializado em código |
 | `deepseek-coder-v2:16b` | ~12 GB | Máquinas potentes, melhor qualidade |
 | `llama3.2:3b` | ~3 GB | Máquinas com pouca RAM |
 

@@ -28,6 +28,7 @@ interface FailureContext {
   steps: string[];
   network: NetworkEntry[];
   screenshotPath?: string;
+  tracePath?: string;
 }
 
 const STORAGE_DIR = path.resolve(__dirname, '../../storage');
@@ -60,6 +61,7 @@ export class FailureCollector implements Reporter {
     const ctx = this.buildContext(test, result);
     this.persistMarkdown(ctx);
     this.persistScreenshot(result, ctx.id);
+    this.persistTrace(result, ctx.id);
   }
 
   private buildContext(test: TestCase, result: TestResult): FailureContext {
@@ -131,6 +133,17 @@ ${ctx.screenshotPath ? `### Screenshot\n![failure-${ctx.id}](${ctx.screenshotPat
     if (screenshot?.path) {
       const dest = path.join(FAILURES_DIR, this.runId, `failure-${id}.png`);
       fs.copyFileSync(screenshot.path, dest);
+    }
+  }
+
+  private persistTrace(result: TestResult, id: number): void {
+    const trace = result.attachments.find(
+      (a) => a.name === 'trace' && a.contentType === 'application/zip'
+    );
+
+    if (trace?.path) {
+      const dest = path.join(FAILURES_DIR, this.runId, `trace-${id}.zip`);
+      fs.copyFileSync(trace.path, dest);
     }
   }
 

@@ -68,7 +68,6 @@ async function analyzeFailures() {
     baseUrl: config.ollama.url,
     timeout: config.ai.timeout,
     temperature: config.ai.temperature,
-    maxTokens: config.ai.maxTokens,
   });
 
   const response = await provider.analyze(PROMPTS.analyzeFailures, `${context}\n\n${systemMap}`);
@@ -102,7 +101,6 @@ async function suggestTests() {
     baseUrl: config.ollama.url,
     timeout: config.ai.timeout,
     temperature: config.ai.temperature,
-    maxTokens: config.ai.maxTokens,
   });
 
   const response = await provider.analyze(PROMPTS.suggestTests, systemMap);
@@ -140,7 +138,6 @@ async function identifyFragility() {
     baseUrl: config.ollama.url,
     timeout: config.ai.timeout,
     temperature: config.ai.temperature,
-    maxTokens: config.ai.maxTokens,
   });
 
   const response = await provider.analyze(PROMPTS.identifyFragility, `${context}\n\n${systemMap}`);
@@ -166,7 +163,6 @@ async function healthCheck() {
       baseUrl: config.ollama.url,
       timeout: 30000, // 30s timeout para health check
       temperature: config.ai.temperature,
-      maxTokens: 100,
     });
 
     const response = await provider.analyze('Responda com: OK', 'teste');
