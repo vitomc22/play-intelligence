@@ -1,5 +1,0 @@
-[llm]
-provider = "ollama"
-model = "ollama/gemma4:e2b"
-api_key = "ollama"
-base_url = "http://127.0.0.1:11434"

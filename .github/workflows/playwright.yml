@@ -1,27 +1,59 @@
-name: Playwright Tests
+name: Playwright Intelligence CI
+
 on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+  workflow_dispatch:
+
 jobs:
-  test:
-    timeout-minutes: 60
+  playwright-intelligence:
+    timeout-minutes: 30
     runs-on: ubuntu-latest
+    
     steps:
     - uses: actions/checkout@v4
+    
     - uses: actions/setup-node@v4
       with:
-        node-version: lts/*
+        node-version: 18
+        cache: 'npm'
+        
     - name: Install dependencies
-      run: npm ci
+      run: npm install
+      
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps
-    - name: Run Playwright tests
-      run: npx playwright test
-    - uses: actions/upload-artifact@v4
-      if: ${{ !cancelled() }}
+      
+    - name: Run Tests
+      run: npm run test
+      continue-on-error: true
+      
+    - name: Run AI Analysis
+      id: ai-analysis
+      run: |
+        # Skip if no cloud keys are provided (Ollama is too heavy for standard runners)
+        if [ -z "$ANTHROPIC_API_KEY" ] && [ -z "$OPENAI_API_KEY" ]; then
+          echo "### ⏭️ AI Analysis Skipped" >> $GITHUB_STEP_SUMMARY
+          echo "Please configure `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` secrets to enable CI analysis." >> $GITHUB_STEP_SUMMARY
+          exit 0
+        fi
+        
+        echo "🚀 Running AI Analysis..."
+        npm run ai:analyze
+        
+        echo "### 🤖 Playwright Intelligence Report" >> $GITHUB_STEP_SUMMARY
+        echo "> Generated at $(date)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        cat storage/analysis-failures.md >> $GITHUB_STEP_SUMMARY
+      env:
+        AI_PROVIDER: ${{ secrets.AI_PROVIDER || 'anthropic' }}
+        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        
+    - name: Upload Test Artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
       with:
-        name: playwright-report
-        path: playwright-report/
-        retention-days: 30
+        name: pwi-data
+        path: |
+          storage/
+          test-results/
+        retention-days: 7

@@ -71,12 +71,26 @@ async function analyzeFailures() {
   });
 
   const response = await provider.analyze(PROMPTS.analyzeFailures, `${context}\n\n${systemMap}`);
-  console.log('\n' + response);
+  
+  const formattedResponse = `
+# 🔍 Playwright Intelligence - Análise de Resultados
+> Gerado em: ${new Date().toLocaleString('pt-BR')}
+> Provedor: ${config.ai.provider} | Modelo: ${config.ai.provider === 'ollama' ? config.ollama.model : config.ai.provider}
+
+---
+
+${response}
+
+---
+_💡 Dica: Use 'npm run ai:heal' para tentar corrigir as falhas acima automaticamente (requer Aider)._
+  `.trim();
+
+  console.log('\n' + formattedResponse);
 
   // Salva resultado
   const outputPath = path.join(config.paths.storage, 'analysis-failures.md');
   fs.mkdirSync(config.paths.storage, { recursive: true });
-  fs.writeFileSync(outputPath, response);
+  fs.writeFileSync(outputPath, formattedResponse);
   console.log(`\n✅ Análise salva em: ${outputPath}`);
 }
 
@@ -104,12 +118,26 @@ async function suggestTests() {
   });
 
   const response = await provider.analyze(PROMPTS.suggestTests, systemMap);
-  console.log('\n' + response);
+  
+  const formattedResponse = `
+# 🧪 Playwright Intelligence - Sugestões de Testes
+> Gerado em: ${new Date().toLocaleString('pt-BR')}
+> Provedor: ${config.ai.provider} | Modelo: ${config.ai.provider === 'ollama' ? config.ollama.model : config.ai.provider}
+
+---
+
+${response}
+
+---
+_💡 Dica: Copie e cole os testes acima em novos arquivos na pasta 'tests/'._
+  `.trim();
+
+  console.log('\n' + formattedResponse);
 
   // Salva resultado
   const outputPath = path.join(config.paths.storage, 'suggested-tests.md');
   fs.mkdirSync(config.paths.storage, { recursive: true });
-  fs.writeFileSync(outputPath, response);
+  fs.writeFileSync(outputPath, formattedResponse);
   console.log(`\n✅ Sugestões salvas em: ${outputPath}`);
 }
 
@@ -141,12 +169,26 @@ async function identifyFragility() {
   });
 
   const response = await provider.analyze(PROMPTS.identifyFragility, `${context}\n\n${systemMap}`);
-  console.log('\n' + response);
+  
+  const formattedResponse = `
+# 🔍 Playwright Intelligence - Relatório de Fragilidade
+> Gerado em: ${new Date().toLocaleString('pt-BR')}
+> Provedor: ${config.ai.provider} | Modelo: ${config.ai.provider === 'ollama' ? config.ollama.model : config.ai.provider}
+
+---
+
+${response}
+
+---
+_💡 Dica: Foque em corrigir os seletores dos componentes listados como críticos._
+  `.trim();
+
+  console.log('\n' + formattedResponse);
 
   // Salva resultado
   const outputPath = path.join(config.paths.storage, 'fragility-report.md');
   fs.mkdirSync(config.paths.storage, { recursive: true });
-  fs.writeFileSync(outputPath, response);
+  fs.writeFileSync(outputPath, formattedResponse);
   console.log(`\n✅ Relatório salvo em: ${outputPath}`);
 }
 

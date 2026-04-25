@@ -1,368 +1,190 @@
-# play-intelligence
-Minha tentativa de fazer um plawright inteligente
+# 🤖 Playwright Intelligence
 
-# Playwright Intelligence
+Ferramenta que intercepta a execução de testes Playwright para coletar contexto de falhas, mapear cobertura do sistema e usar IA local (Ollama) ou nuvem (Anthropic/OpenAI) para analisar padrões, sugerir melhorias e até corrigir testes automaticamente.
 
-Ferramenta que intercepta a execução de testes Playwright para coletar contexto de falhas, mapear cobertura do sistema e usar IA local (Ollama) para analisar padrões e sugerir melhorias.
-
-**🎯 Sem custos de API. Roda 100% localmente no seu PC.**
+**🎯 Sem custos de API (opcional). Roda 100% localmente no seu PC.**
 
 ---
 
-## 🚀 Quick Start (Docker)
+## 🏗️ Arquitetura
 
-### Pré-requisitos
-- Docker instalado
+O sistema é dividido em quatro camadas principais que trabalham em conjunto para transformar falhas de teste em insights e correções:
 
-### Setup automático (Recomendado)
+```mermaid
+graph TD
+    A["🧪 Testes Playwright<br/><code>tests/**/*.spec.ts</code>"] -->|Executa| B["📊 Reporter Custom<br/><code>src/reporter/</code>"]
+    
+    B -->|Coleta falhas & contexto| C["📦 Storage<br/>• context.md<br/>• system-map.json<br/>• failures/"]
+    
+    C -->|Analisa| D["🤖 IA Layer<br/>Ollama / Anthropic / OpenAI"]
+    
+    D -->|Responde| E["📝 Análise de Falhas<br/><code>storage/analysis-failures.md</code>"]
+    
+    E -->|Passado para| F["🏥 Healer - Aider<br/><code>src/healer/</code>"]
+    
+    F -->|Executa via CLI| G["🤖 Aider<br/>Edição de Código com IA"]
+    
+    G -->|Corrige| A
+    
+    G -->|Valida| H["✅ Testes Passando?"]
+    
+    H -->|Sim| I["📄 Relatório Final<br/><code>healing-report.md</code>"]
+    
+    H -->|Não| J["🔄 Iteração<br/>Reanalisa & corrige"]
+    
+    J -->|Continua| E
 
-```bash
-# 1. Clone/copie para seu projeto
-cp -r play-intelligence/ seu-projeto/
-cd seu-projeto
-
-# 2. Execute o setup (vai instalar Ollama + Qwen no Docker)
-bash setup-ollama.sh
-
-# 3. Pronto! Comece a usar
-npm run test:intelligence
+    style A fill:#4CAF50,color:#fff
+    style B fill:#2196F3,color:#fff
+    style C fill:#FF9800,color:#fff
+    style D fill:#9C27B0,color:#fff
+    style E fill:#F44336,color:#fff
+    style F fill:#00BCD4,color:#fff
+    style G fill:#673AB7,color:#fff
+    style H fill:#3F51B5,color:#fff
+    style I fill:#4CAF50,color:#fff
+    style J fill:#FFC107,color:#000
 ```
 
-### Setup manual
+### Componentes Principais
 
-```bash
-# 1. Inicia Ollama em Docker
-docker-compose up -d
-
-# 2. Aguarde 30s e baixe o modelo
-docker exec playwright-ollama ollama pull gemma4:e2b
-
-# 3. Instale dependências
-npm install
-
-# 4. Configure seu projeto
-```
+1.  **Reporter (`src/reporter/`)**: Intercepta a execução do Playwright e coleta dados de screenshots, stack traces e estado do DOM.
+2.  **Analyzer (`src/analyzer/`)**: Interface com provedores de IA para processar os dados coletados.
+3.  **Healer (`src/healer/`)**: Orquestra a correção automática de testes usando o **Aider**.
+4.  **Storage (`storage/`)**: Camada de persistência para contextos de falha, mapas de sistema e relatórios.
 
 ---
 
-## 📋 Setup Detalhado
-
-### Opção 1: Docker (Recomendado para Ryzen 7)
-
-```bash
-# Inicia Ollama + Qwen no Docker
-make start
-
-# Verifica se está rodando
-make health
-
-# Ver logs
-make logs
-
-# Parar quando terminar
-make stop
-```
-
-### Opção 2: Ollama Standalone (se preferir)
-
-```bash
-# Instalar Ollama
-curl -fsSL https://ollama.com/install.sh | sh
-
-# Baixar modelo
-ollama pull gemma4:e2b
-
-# Rodar Ollama
-ollama serve
-```
-
-### Opção 3: Usar seu Alpaca (se já tem)
-
-Se já baixou Qwen Coder 2.5 no Alpaca:
-
-```bash
-# Edite .env
-OLLAMA_URL=http://127.0.0.1:8000
-OLLAMA_MODEL=qwen-coder-2.5
-```
-
----
-
-## 📁 Estrutura do Projeto
+## 📂 Estrutura do Projeto
 
 ```
 play-intelligence/
-├── reporter/
-│   ├── collector.ts      # Captura falhas
-│   ├── mapper.ts         # Mapeia cobertura
-│   └── index.ts          # Reporter combinado
-├── analyzer/
-│   ├── ai-client.ts      # Interface com IA (Ollama/Anthropic/OpenAI)
-│   └── prompts.ts        # Prompts estruturados
-├── cli.ts                # Comandos CLI
-├── config.ts             # Configuração centralizada
-├── .env                  # Variáveis de ambiente
-├── docker-compose.yml    # Docker para Ollama
-├── setup-ollama.sh       # Script de setup
-└── Makefile              # Comandos úteis
+├── src/                              # Código-fonte principal
+│   ├── reporter/                     # Reporter Playwright (Collector & Mapper)
+│   ├── analyzer/                     # Análise com IA (Clients & Prompts)
+│   ├── healer/                       # Correção automática com Aider
+│   ├── cli.ts                        # Interface de linha de comando
+│   └── config.ts                     # Configuração centralizada
+├── storage/                          # Dados gerados (contexto, mapas, reports)
+├── tests/                            # Testes de exemplo
+├── .github/workflows/                # CI/CD com GitHub Actions
+├── docker-compose.yml                # Docker para Ollama
+├── setup-ollama.sh                   # Script de setup automatizado
+└── playwright.config.ts              # Configuração do Playwright
 ```
 
 ---
 
-## 🎯 Uso
+## 🚀 Quick Start
 
-### 1. Configurar seu projeto Playwright
+### 1. Instalação Automática (Recomendado)
 
-Adicione o reporter no `playwright.config.ts`:
+```bash
+# 1. Clone o projeto e instale dependências
+npm install
+
+# 2. Setup completo (Docker + Ollama + Modelos + Aider)
+bash setup-ollama.sh
+```
+
+### 2. Configuração do Playwright
+
+Adicione o reporter no seu arquivo `playwright.config.ts`:
 
 ```typescript
-import { defineConfig } from '@playwright/test';
-
 export default defineConfig({
   reporter: [
     ['list'],
-    ['./reporter/index.ts'],  // ← Adicione esta linha
+    ['./src/reporter/index.ts'],
   ],
+  use: {
+    trace: 'on',
+    screenshot: 'on',
+  }
 });
 ```
 
-### 2. Rodar testes (collector + mapper executam automáticamente)
+### 3. Fluxo de Trabalho
 
 ```bash
-# Executa testes com coleta de contexto
-npm run test:intelligence
-```
+# Executa testes e coleta contexto
+npm run test
 
-### 3. Analisar com IA
-
-```bash
 # Analisa falhas e identifica padrões
 npm run ai:analyze
 
-# Sugere novos testes baseado em cobertura
-npm run ai:suggest
-
-# Identifica testes frágeis
-npm run ai:fragility
-
-# Health check da IA
-npm run ai:health
+# (Opcional) Tenta corrigir os testes automaticamente
+npm run ai:heal
 ```
 
 ---
 
-## ⚙️ Configuração
+## 🛠️ Comandos Disponíveis
 
-### Variáveis de ambiente (`.env`)
+| Comando | Descrição |
+|---------|-----------|
+| `npm run test` | Executa a suite de testes Playwright com coleta de dados. |
+| `npm run ai:analyze` | Gera um relatório detalhado sobre padrões de falha e causas raiz. |
+| `npm run ai:suggest` | Sugere novos cenários de teste baseados na cobertura atual. |
+| `npm run ai:heal` | Inicia o processo de auto-correção usando Aider. |
+| `npm run ai:health` | Verifica a conectividade com o provedor de IA. |
+| `npm run build` | Compila o projeto TypeScript para JavaScript. |
+
+---
+
+## ⚙️ Configuração (.env)
+
+O projeto é altamente configurável através de variáveis de ambiente:
 
 ```env
-# Provider de IA (padrão: ollama)
+# Provedor: ollama | anthropic | openai
 AI_PROVIDER=ollama
-
-# Ollama
-OLLAMA_URL=http://localhost:11434
 OLLAMA_MODEL=gemma4:e2b
+OLLAMA_URL=http://localhost:11434
 
-# Timeouts (em ms)
-AI_TIMEOUT_MS=300000        # 5 min (para Ryzen processar)
+# Timeouts e Parâmetros
+AI_TIMEOUT_MS=300000
+AI_TEMPERATURE=0.2
 
-# Parâmetros
-AI_TEMPERATURE=0.2          # Baixo = mais determinístico
-AI_MAX_TOKENS=2000
-
-# Diretório de armazenamento
-STORAGE_DIR=./storage
-ENABLE_CACHE=true
+# Healer (Aider)
+AIDER_MODEL=ollama_chat/gemma4:e2b
+AIDER_AUTO_COMMIT=true
 ```
 
 ---
 
-## 📊 Modelos Recomendados
+## 🤖 Modelos Recomendados
 
-### Para seu Ryzen 7 3ª gen + 16GB RAM
-
-| Modelo | Tamanho | Qualidade | Velocidade |
-|--------|--------|-----------|-----------|
-| **gemma4:e2b** | ~5GB RAM | ⭐⭐⭐⭐⭐ | ~30s/resposta |
-| qwen2.5:7b | ~5GB RAM | ⭐⭐⭐⭐ | ~30s/resposta |
-| llama2:7b | ~4GB RAM | ⭐⭐⭐ | ~30s/resposta |
-| mistral:7b | ~4GB RAM | ⭐⭐⭐⭐ | ~30s/resposta |
-
-**Recomendação**: Qwen 2.5 Coder é especializado em análise de código.
+Para execução local em máquinas com 16GB RAM (ex: Ryzen 7):
+- **gemma4:e2b**: Especializado em análise técnica e código.
+- **qwen2.5-coder:7b**: Excelente equilíbrio entre performance e precisão.
+- **deepseek-r1:7b**: Ideal para raciocínio lógico complexo.
 
 ---
 
-## 🔧 Troubleshooting
+## 🔄 CI/CD - GitHub Actions
 
-### ❌ "Modelo não encontrado"
-```bash
-# Baixe manualmente
-docker exec playwright-ollama ollama pull gemma4:e2b
+O projeto inclui uma integração nativa com GitHub Actions para rodar testes. 
 
-# Ou verifique quais modelos estão disponíveis
-curl http://localhost:11434/api/tags
-```
+> [!NOTE]
+> A Action está configurada para **execução manual** via `workflow_dispatch`. Isso permite que você escolha exatamente quando gastar recursos de IA em nuvem para analisar falhas complexas.
 
-### ❌ "Conexão recusada"
-```bash
-# Verifique se Ollama está rodando
-docker ps | grep ollama
-
-# Se não estiver, inicie
-docker-compose up -d
-
-# Ver logs
-docker logs playwright-ollama
-```
-
-### ❌ "Timeout após 5 minutos"
-CPU está lenta. Aumente o timeout em `.env`:
-```env
-AI_TIMEOUT_MS=600000  # 10 minutos
-```
-
-### ❌ "Memória cheia"
-Reduza o modelo:
-```env
-OLLAMA_MODEL=qwen2.5:3b  # Versão 3B ao invés de 7B
-```
+> [!TIP]
+> A análise de IA no CI é enviada diretamente para o **Job Summary** do GitHub. O `healer` é desabilitado no CI para economizar recursos.
 
 ---
 
-## 📁 Estrutura de arquivos
+## 📜 Histórico de Mudanças
 
-```
-play-intelligence/
-├── reporter/
-│   ├── collector.ts         # Captura contexto de falhas
-│   ├── mapper.ts            # Mapeia ações e cobertura
-│   └── index.ts             # Reporter combinado
-├── analyzer/
-│   ├── ai-client.ts         # Interface com IA
-│   └── prompts.ts           # Prompts estruturados
-├── storage/
-│   ├── context.md           # Todas as falhas
-│   ├── system-map.json      # Mapa de cobertura
-│   └── cache/               # Cache de respostas
-├── cli.ts                   # Comandos CLI
-├── config.ts                # Configuração centralizada
-├── .env                     # Variáveis de ambiente
-├── docker-compose.yml       # Docker para Ollama
-├── setup-ollama.sh          # Script de setup
-└── Makefile                 # Comandos úteis
-```
+- **v1.1**: Reorganização total do código para a pasta `src/`.
+- **v1.1**: Suporte a "Thinking Mode" no Gemma para análises mais profundas.
+- **v1.0**: Integração inicial com Aider para auto-correção.
+- **v1.0**: Implementação do `SystemMapper` para visualização de cobertura.
 
 ---
 
-## 💡 Performance
+## 📞 Suporte e Troubleshooting
 
-### Esperado no seu Ryzen 7 3ª gen
-- **Tempo de resposta**: 1-5 minutos por análise
-- **Velocidade**: ~10 tokens/segundo (CPU)
-- **Qualidade**: Excelente para análise de código
-
-### Otimizações
-
-#### 1. GPU (se tiver NVIDIA)
-```bash
-docker run --gpus all -d -p 11434:11434 ollama/ollama
-# Vai para ~200 tokens/segundo
-```
-
-#### 2. Modelo menor
-```env
-OLLAMA_MODEL=llama2:3b  # 3x mais rápido, um pouco menos preciso
-```
-
-#### 3. Aumentar worker threads
-```env
-# Edite docker-compose.yml
-environment:
-  - OLLAMA_NUM_PARALLEL=4
-```
-
----
-
-## 📚 Exemplos de Output
-
-### Análise de Falhas
-```markdown
-## 1. Padrões Identificados
-
-### Seletores Frágeis (5 falhas)
-- Elemento não encontrado em `#user-profile > .modal`
-- Causa: DOM changes em atualizações de versão
-- Solução: Usar `getByRole('dialog')` ao invés
-
-...
-```
-
-### Sugestão de Testes
-```typescript
-// tests/checkout/coupon-integration.spec.ts
-test('deve validar cupom expirado', async ({ page }) => {
-  // Novo teste sugerido pela IA
-  // Coverage score atual: 45% → 72% com este teste
-  ...
-});
-```
-
----
-
-## 🚨 Notas Importantes
-
-- ✅ **Sem custos**: Roha 100% offline
-- ⚠️ **Primeira execução**: Pode levar 20-30min para baixar modelo (~5GB)
-- 🔄 **Cache**: Respostas são cacheadas por hash do contexto
-- 📊 **Storage**: Verifique `./storage` após rodar testes
-
----
-
-## 🎯 Próximos Passos
-
-1. ✅ Execute `bash setup-ollama.sh`
-2. ✅ Rode seus testes: `npm run test:intelligence`
-3. ✅ Analise: `npm run ai:analyze`
-4. ✅ Revise relatórios em `./storage/reports/`
-5. ✅ Implemente sugestões
-
----
-
-## 📞 Suporte
-
-Veja `SETUP_LOCAL_AI.md` para troubleshooting detalhado.
-cat playwright-intelligence/storage/reports/report-*.md
-
-# 4. Limpar storage entre campanhas de testes
-npm run pwi:reset
-```
-
-## Variáveis de ambiente
-
-| Variável | Default | Descrição |
-|---|---|---|
-| `AI_PROVIDER` | `ollama` | Provider de IA: `ollama` ou `anthropic` |
-| `OLLAMA_MODEL` | `gemma4:e2b` | Modelo Ollama a usar |
-| `OLLAMA_URL` | `http://localhost:11434` | URL da API Ollama |
-| `ANTHROPIC_API_KEY` | — | Chave Anthropic (se usar fallback cloud) |
-
-## Modelos recomendados
-
-| Modelo | RAM | Quando usar |
-|---|---|---|
-| `gemma4:e2b` | ~6 GB | **Recomendado** — especializado em código |
-| `deepseek-coder-v2:16b` | ~12 GB | Máquinas potentes, melhor qualidade |
-| `llama3.2:3b` | ~3 GB | Máquinas com pouca RAM |
-
-## Estrutura de arquivos gerados
-
-```
-playwright-intelligence/
-└── storage/
-    ├── context.md              # Todas as falhas coletadas
-    ├── system-map.json         # Mapa de cobertura por rota
-    ├── failures/
-    │   └── run-{id}/           # Screenshots por execução
-    └── reports/
-        └── report-{date}.md    # Relatório gerado pela IA
-```
+- Se o Ollama falhar por timeout, aumente `AI_TIMEOUT_MS`.
+- Verifique se o Docker está rodando com `make health`.
+- Logs detalhados em `storage/context.md`.
