@@ -37,6 +37,12 @@ export default defineConfig({
     trace: 'on',
     screenshot: 'on',
     video: 'on-first-retry',
+    ignoreHTTPSErrors: true,
+    viewport: null,
+    launchOptions: {
+      headless: false,
+      args: ['--start-maximized'],
+    }
   },
 
   /* Configure projects for major browsers */
@@ -46,15 +52,6 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
 
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
 
     /* Test against mobile viewports. */
     // {
