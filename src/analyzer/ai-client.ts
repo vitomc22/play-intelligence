@@ -2,6 +2,7 @@
  * @fileoverview AI Client Module.
  * Provides a unified interface for interacting with different AI providers (Ollama, Anthropic, OpenAI).
  */
+import fs from 'fs';
 
 /**
  * Interface for AI providers that can analyze text context.
@@ -14,6 +15,14 @@ export interface AIProvider {
    * @returns A promise that resolves to the AI's response string.
    */
   analyze(prompt: string, context: string): Promise<string>;
+
+  /**
+   * Analyzes an image using vision capabilities.
+   * @param imagePath Absolute path to the image file.
+   * @param prompt The instruction for the AI about what to look for.
+   * @returns A promise that resolves to the AI's visual analysis.
+   */
+  analyzeImage?(imagePath: string, prompt: string): Promise<string>;
 }
 
 /**
@@ -66,7 +75,7 @@ export class OllamaProvider implements AIProvider {
     try {
       console.log(`📡 Conectando ao Ollama (${this.model})...`);
       console.log(`⏱️  Timeout configurado: ${Math.floor(this.timeout / 1000 / 60)} minutos`);
-      
+
       const response = await fetch(`${this.baseUrl}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -104,7 +113,7 @@ export class OllamaProvider implements AIProvider {
       }
 
       console.log('⏳ Gerando resposta (streaming)...');
-      
+
       const reader = response.body?.getReader();
       if (!reader) throw new Error('Não foi possível ler o stream da resposta');
 
@@ -117,7 +126,7 @@ export class OllamaProvider implements AIProvider {
 
         const chunk = decoder.decode(value, { stream: true });
         const lines = chunk.split('\n').filter(l => l.trim());
-        
+
         for (const line of lines) {
           try {
             const data = JSON.parse(line);
@@ -148,6 +157,88 @@ export class OllamaProvider implements AIProvider {
         );
       }
       throw error;
+    }
+  }
+
+  /**
+   * Sends an image to the Ollama chat API for visual analysis using Gemma 4 vision.
+   * The image is read from disk and sent as a base64-encoded string.
+   * Uses a dedicated 60-second timeout for vision inference.
+   */
+  async analyzeImage(imagePath: string, prompt: string): Promise<string> {
+    const visionTimeout = 300000; // 5 minutos para análise visual
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), visionTimeout);
+
+    try {
+      console.log(`🖼️  Analisando screenshot com ${this.model}...`);
+
+      const imageBuffer = fs.readFileSync(imagePath);
+      const base64Image = imageBuffer.toString('base64');
+
+      const response = await fetch(`${this.baseUrl}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: this.model,
+          stream: true,
+          messages: [
+            {
+              role: 'user',
+              content: prompt,
+              images: [base64Image],
+            },
+          ],
+          options: {
+            temperature: this.temperature,
+            num_ctx: 4096,
+          },
+        }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        clearTimeout(timeoutId);
+        throw new Error(`Ollama vision error: ${response.status} ${response.statusText}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('Não foi possível ler o stream da resposta de visão');
+
+      let fullContent = '';
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n').filter(l => l.trim());
+
+        for (const line of lines) {
+          try {
+            const data = JSON.parse(line);
+            if (data.message?.content) {
+              fullContent += data.message.content;
+            }
+            if (data.done) break;
+          } catch (e) {
+            // Ignora chunks incompletos
+          }
+        }
+      }
+
+      clearTimeout(timeoutId);
+      console.log('✅ Análise visual concluída.');
+      return fullContent;
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        console.warn('⚠️  Timeout na análise visual (60s). Continuando sem análise de imagem.');
+        return '';
+      }
+      console.warn(`⚠️  Erro na análise visual: ${error.message}. Continuando sem análise de imagem.`);
+      return '';
     }
   }
 }

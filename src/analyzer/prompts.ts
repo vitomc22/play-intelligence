@@ -70,4 +70,16 @@ e no que seria esperado cobrir em um sistema web típico.
 ## 4. Score de saúde geral
 Dê uma nota de 0 a 100 para a suite de testes com justificativa.
 `,
+
+  analyzeScreenshot: `
+Analise este screenshot de um teste Playwright que falhou.
+Descreva objetivamente:
+
+1. **Estado da tela**: O que está visível na interface (formulários, botões, modais, mensagens de erro)
+2. **Indicadores de erro**: Mensagens de erro visíveis, campos destacados em vermelho, toasts, alerts
+3. **Estado do carregamento**: A página carregou completamente? Há spinners ou áreas em branco?
+4. **Contexto de navegação**: Em qual página/rota o usuário parece estar?
+
+Seja conciso e técnico. Máximo 10 linhas. Responda em português.
+`,
 };

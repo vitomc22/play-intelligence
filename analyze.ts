@@ -72,8 +72,11 @@ async function analyze() {
   const hasFailures = context.includes('## FAILURE');
 
   if (hasFailures) {
-    process.stdout.write('📋 Analisando padrões de falha...');
-    const failureAnalysis = await ai.analyze(PROMPTS.analyzeFailures, context);
+    // Extrai screenshots e realiza análise visual antes da análise de padrões
+    const enrichedContext = await enrichContextWithVision(context, ai);
+    
+    process.stdout.write('📋 Analisando padrões de falha (texto + visão)...');
+    const failureAnalysis = await ai.analyze(PROMPTS.analyzeFailures, enrichedContext);
     process.stdout.write(' ✅\n');
     report += `# Análise de Falhas\n\n${failureAnalysis}\n\n---\n\n`;
   } else {
@@ -102,6 +105,55 @@ async function analyze() {
   // ── Salva relatório ──────────────────────────────────────
   fs.writeFileSync(reportFile, report);
   console.log(`\n✨ Relatório salvo em: ${reportFile}\n`);
+}
+
+/**
+ * Parses context.md, finds screenshots, and adds AI-generated visual descriptions.
+ */
+async function enrichContextWithVision(context: string, ai: any): Promise<string> {
+  if (!ai.analyzeImage) return context;
+
+  const failureBlocks = context.split('## FAILURE').filter(b => b.trim());
+  let enrichedContext = '# Playwright Intelligence — Enriched Context\n\n';
+
+  for (const block of failureBlocks) {
+    const fullBlock = `## FAILURE${block}`;
+    
+    // Procura por Markdown de imagem: ![failure-X](path)
+    const screenshotMatch = block.match(/!\[failure-\d+\]\((.*?)\)/);
+    
+    if (screenshotMatch && screenshotMatch[1]) {
+      const screenshotPath = screenshotMatch[1];
+      
+      if (fs.existsSync(screenshotPath)) {
+        process.stdout.write(`🖼️  Analisando visualmente FAILURE #${extractId(block)}...`);
+        try {
+          const visualAnalysis = await ai.analyzeImage(screenshotPath, PROMPTS.analyzeScreenshot);
+          const enrichedBlock = fullBlock.replace(
+            '---', 
+            `### Análise Visual (Gemma 4 Vision)\n${visualAnalysis}\n\n---`
+          );
+          enrichedContext += enrichedBlock;
+          process.stdout.write(' ✅\n');
+        } catch (err) {
+          process.stdout.write(' ❌ (erro na visão)\n');
+          enrichedContext += fullBlock;
+        }
+      } else {
+        enrichedContext += fullBlock;
+      }
+    } else {
+      enrichedContext += fullBlock;
+    }
+  }
+
+  return enrichedContext;
+}
+
+/** Extracts failure ID from block header */
+function extractId(block: string): string {
+  const match = block.match(/#(\d+)/);
+  return match ? match[1] : '?';
 }
 
 /**

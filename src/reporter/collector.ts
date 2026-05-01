@@ -65,6 +65,21 @@ const FAILURES_DIR = path.join(STORAGE_DIR, 'failures');
 const CONTEXT_FILE = path.join(STORAGE_DIR, 'context.md');
 
 /**
+ * Strips ANSI escape codes from a string.
+ * Playwright error messages often contain color sequences (e.g., \u001b[31m)
+ * that produce garbage characters in Markdown output.
+ * @param text The string to clean.
+ * @returns The string without ANSI escape codes.
+ */
+function stripAnsi(text: string): string {
+  // Remove sequências ANSI completas, parciais e caracteres de controle
+  return text
+    .replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-zARZcfghilmnpqrstuvwy]/g, '')
+    .replace(/\[\d{1,2}[a-zA-Z]/g, '') // Limpa sequências órfãs como [2m ou [31m
+    .replace(/\u001b/g, ''); // Garante que nenhum ESC sobrou
+}
+
+/**
  * Custom Playwright Reporter that collects detailed failure data for AI analysis.
  */
 export class FailureCollector implements Reporter {
@@ -99,13 +114,18 @@ export class FailureCollector implements Reporter {
    * @param test The test case metadata.
    * @param result The result of the test execution.
    */
-  onTestEnd(test: TestCase, result: TestResult): void {
+  async onTestEnd(test: TestCase, result: TestResult): Promise<void> {
     if (result.status !== 'failed' && result.status !== 'timedOut') return;
 
     this.failureCount++;
     const ctx = this.buildContext(test, result);
+
+    const screenshotPath = this.persistScreenshot(result, ctx.id);
+    if (screenshotPath) {
+      ctx.screenshotPath = screenshotPath;
+    }
+
     this.persistMarkdown(ctx);
-    this.persistScreenshot(result, ctx.id);
     this.persistTrace(result, ctx.id);
   }
 
@@ -116,13 +136,17 @@ export class FailureCollector implements Reporter {
   private buildContext(test: TestCase, result: TestResult): FailureContext {
     const steps = result.steps.map((s: TestStep) => {
       const icon = s.error ? '❌' : '✅';
-      return `${icon} ${s.title}${s.error ? ` — ${s.error.message?.split('\n')[0]}` : ''}`;
+      const errorMsg = s.error?.message ? ` — ${stripAnsi(s.error.message.split('\n')[0])}` : '';
+      return `${icon} ${s.title}${errorMsg}`;
     });
 
     const network: NetworkEntry[] = (result as any).attachments
       ?.filter((a: any) => a.name === 'network')
       .map((a: any) => JSON.parse(a.body?.toString() ?? '{}'))
       .flat() ?? [];
+
+    // Captura até 50 linhas do erro para pegar o Call Log e Strict Mode violations
+    const rawError = result.error?.message?.split('\n').slice(0, 50).join('\n') ?? 'Unknown error';
 
     return {
       id: this.failureCount,
@@ -131,7 +155,7 @@ export class FailureCollector implements Reporter {
       file: `${test.location.file}:${test.location.line}`,
       duration: result.duration / 1000,
       browser: test.parent?.project()?.name ?? 'unknown',
-      error: result.error?.message?.split('\n').slice(0, 3).join('\n') ?? 'Unknown error',
+      error: stripAnsi(rawError),
       steps,
       network: network.slice(-5), // últimas 5 requests
     };
@@ -172,25 +196,33 @@ ${networkSection}
 
 ${ctx.screenshotPath ? `### Screenshot\n![failure-${ctx.id}](${ctx.screenshotPath})\n` : ''}
 ---
-
 `;
-
     fs.appendFileSync(CONTEXT_FILE, block);
   }
 
   /**
    * Saves the test screenshot to the failures directory.
+   * @returns The destination path of the saved screenshot, or undefined if none found.
    * @private
    */
-  private persistScreenshot(result: TestResult, id: number): void {
+  private persistScreenshot(result: TestResult, id: number): string | undefined {
+    // Procura por qualquer anexo que seja imagem ou que tenha "screenshot" no nome
     const screenshot = result.attachments.find(
-      (a) => a.name === 'screenshot' && a.contentType === 'image/png'
+      (a) => 
+        (a.contentType === 'image/png') || 
+        (a.name?.toLowerCase().includes('screenshot'))
     );
 
     if (screenshot?.path) {
       const dest = path.join(FAILURES_DIR, this.runId, `failure-${id}.png`);
-      fs.copyFileSync(screenshot.path, dest);
+      try {
+        fs.copyFileSync(screenshot.path, dest);
+        return dest;
+      } catch (err) {
+        console.error(`❌ Erro ao copiar screenshot: ${err}`);
+      }
     }
+    return undefined;
   }
 
   /**
@@ -199,12 +231,18 @@ ${ctx.screenshotPath ? `### Screenshot\n![failure-${ctx.id}](${ctx.screenshotPat
    */
   private persistTrace(result: TestResult, id: number): void {
     const trace = result.attachments.find(
-      (a) => a.name === 'trace' && a.contentType === 'application/zip'
+      (a) => 
+        (a.contentType === 'application/zip') || 
+        (a.name?.toLowerCase().includes('trace'))
     );
 
     if (trace?.path) {
       const dest = path.join(FAILURES_DIR, this.runId, `trace-${id}.zip`);
-      fs.copyFileSync(trace.path, dest);
+      try {
+        fs.copyFileSync(trace.path, dest);
+      } catch (err) {
+        console.error(`❌ Erro ao copiar trace: ${err}`);
+      }
     }
   }
 

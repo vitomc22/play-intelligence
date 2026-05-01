@@ -66,9 +66,9 @@ async function analyzeFailures() {
     process.exit(1);
   }
 
-  console.log('\n📊 Analisando falhas de testes...');
+  console.log('\n📊 Iniciando análise inteligente...');
 
-  const context = fs.readFileSync(contextPath, 'utf-8');
+  let context = fs.readFileSync(contextPath, 'utf-8');
   const systemMap = fs.existsSync(config.paths.systemMap)
     ? fs.readFileSync(config.paths.systemMap, 'utf-8')
     : 'Mapa não disponível';
@@ -81,6 +81,61 @@ async function analyzeFailures() {
     temperature: config.ai.temperature,
   });
 
+  // 1. Processamento Visual (Gemma 4 Vision)
+  const parts = context.split('## FAILURE');
+  const header = parts[0];
+  const failureBlocks = parts.slice(1);
+  
+  let newContext = header;
+  let hasChanges = false;
+
+  if (failureBlocks.length > 0) {
+    for (const block of failureBlocks) {
+      let fullBlock = `## FAILURE${block}`;
+      
+      // Se já tiver análise visual, mantém o bloco original
+      if (block.includes('### Análise Visual')) {
+        newContext += fullBlock;
+        continue;
+      }
+
+      // Procura por screenshot
+      const screenshotMatch = block.match(/!\[failure-\d+\]\((.*?)\)/);
+      if (screenshotMatch && screenshotMatch[1]) {
+        const screenshotPath = screenshotMatch[1];
+        const idMatch = block.match(/#(\d+)/);
+        const id = idMatch ? idMatch[1] : '?';
+
+        if (fs.existsSync(screenshotPath) && provider.analyzeImage) {
+          process.stdout.write(`🖼️  Analisando visualmente FAILURE #${id}...`);
+          try {
+            const visualAnalysis = await provider.analyzeImage(screenshotPath, PROMPTS.analyzeScreenshot);
+            fullBlock = fullBlock.replace(
+              '---', 
+              `### Análise Visual (Gemma 4 Vision)\n${visualAnalysis}\n\n---`
+            );
+            hasChanges = true;
+            process.stdout.write(' ✅\n');
+          } catch (err) {
+            process.stdout.write(' ❌ (erro na visão)\n');
+          }
+        } else if (!fs.existsSync(screenshotPath)) {
+          console.warn(`⚠️  Screenshot não encontrado para FAILURE #${id}: ${screenshotPath}`);
+        }
+      }
+      newContext += fullBlock;
+    }
+  }
+
+  // Se houve novas análises visuais, atualiza o arquivo context.md
+  if (hasChanges) {
+    context = newContext;
+    fs.writeFileSync(contextPath, context);
+    console.log('📝 Contexto atualizado com descrições visuais.');
+  }
+
+  // 2. Análise de Padrões e Causa Raiz
+  console.log('📋 Analisando padrões de falha (Texto + Visão)...');
   const response = await provider.analyze(PROMPTS.analyzeFailures, `${context}\n\n${systemMap}`);
   
   const formattedResponse = `
@@ -98,12 +153,14 @@ _💡 Dica: Use 'npm run ai:heal' para tentar corrigir as falhas acima automatic
 
   console.log('\n' + formattedResponse);
 
-  // Salva resultado
+  // Salva resultado final
   const outputPath = path.join(config.paths.storage, 'analysis-failures.md');
   fs.mkdirSync(config.paths.storage, { recursive: true });
   fs.writeFileSync(outputPath, formattedResponse);
-  console.log(`\n✅ Análise salva em: ${outputPath}`);
+  console.log(`\n✅ Relatório completo salvo em: ${outputPath}`);
 }
+
+
 
 /**
  * Generates suggestions for new test cases based on the current system map and identified coverage gaps.

@@ -5,7 +5,7 @@
   "main": "src/index.ts",
   "scripts": {
     "test": "playwright test",
-    "test:intelligence": "playwright test",
+    "test:intelligence": "playwright test --reporter ./src/reporter/index.ts",
     "ai:analyze": "ts-node src/cli.ts analyze",
     "ai:suggest": "ts-node src/cli.ts suggest-tests",
     "ai:fragility": "ts-node src/cli.ts fragility",

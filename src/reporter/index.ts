@@ -69,9 +69,12 @@ export class PlaywrightIntelligence implements Reporter {
 
   /**
    * Forwards onTestEnd event to all sub-reporters.
+   * Uses await to support async sub-reporters (e.g., Gemma 4 vision analysis).
    */
-  onTestEnd(test: TestCase, result: TestResult): void {
-    this.reporters.forEach((r) => r.onTestEnd?.(test, result));
+  async onTestEnd(test: TestCase, result: TestResult): Promise<void> {
+    for (const r of this.reporters) {
+      await r.onTestEnd?.(test, result);
+    }
   }
 
   /**
