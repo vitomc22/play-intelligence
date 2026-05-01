@@ -1,5 +1,16 @@
+/**
+ * @fileoverview Playwright Test Configuration.
+ * Defines projects, reporters, browser settings, and CI-specific overrides.
+ * Uses the custom {@link PlaywrightIntelligence} reporter to collect failure context and system maps.
+ *
+ * @see https://playwright.dev/docs/test-configuration
+ */
 import { defineConfig, devices } from '@playwright/test';
 
+/**
+ * Ambient declaration for the `process` global.
+ * Required because this config file is evaluated outside of a Node.js type context.
+ */
 declare const process: { env: { CI?: string } };
 
 /**

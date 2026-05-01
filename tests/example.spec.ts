@@ -1,5 +1,13 @@
+/**
+ * @fileoverview Example Playwright Test Spec.
+ * Covers the "Create a new food" CRUD flow on the local development server.
+ * Serves as a reference test for the {@link PlaywrightIntelligence} reporter pipeline.
+ */
 import { test, expect } from '@playwright/test';
 
+/**
+ * Navigate to the application root before each test case.
+ */
 test.beforeEach(async ({ page }) => {
   await page.goto('http://localhost:5173/');
 })

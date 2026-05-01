@@ -17,10 +17,15 @@ import type {
  * Represents a single network request captured during a test.
  */
 interface NetworkEntry {
+  /** The full URL of the request. */
   url: string;
+  /** The HTTP method (GET, POST, etc.). */
   method: string;
+  /** The HTTP response status code. */
   status: number;
+  /** Duration of the request in milliseconds. */
   duration: number;
+  /** ISO 8601 timestamp of when the request was made. */
   timestamp: string;
 }
 
@@ -28,21 +33,35 @@ interface NetworkEntry {
  * Detailed context for a test failure.
  */
 interface FailureContext {
+  /** Sequential failure identifier within the current run. */
   id: number;
+  /** ISO 8601 timestamp of when the failure was recorded. */
   timestamp: string;
+  /** Full title path of the failed test (e.g. "Suite › Test Name"). */
   test: string;
+  /** Source file path and line number (e.g. "example.spec.ts:7"). */
   file: string;
+  /** Test execution duration in seconds. */
   duration: number;
+  /** Name of the browser project (e.g. "chromium", "firefox"). */
   browser: string;
+  /** Truncated error message (first 3 lines). */
   error: string;
+  /** List of step descriptions with pass/fail icons. */
   steps: string[];
+  /** Last 5 network requests captured during the test. */
   network: NetworkEntry[];
+  /** Path to the failure screenshot, if captured. */
   screenshotPath?: string;
+  /** Path to the Playwright trace archive, if captured. */
   tracePath?: string;
 }
 
+/** Absolute path to the root storage directory. */
 const STORAGE_DIR = path.resolve(__dirname, '../../storage');
+/** Directory where per-run failure artifacts (screenshots, traces) are saved. */
 const FAILURES_DIR = path.join(STORAGE_DIR, 'failures');
+/** Path to the cumulative failure context Markdown file consumed by the AI analyzer. */
 const CONTEXT_FILE = path.join(STORAGE_DIR, 'context.md');
 
 /**

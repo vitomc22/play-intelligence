@@ -61,11 +61,19 @@ interface CoverageEntry {
   gaps: string[];
 }
 
+/** Absolute path to the storage directory for persisting map data. */
 const STORAGE_DIR = path.resolve(__dirname, '../../storage');
+/** Path to the system-map JSON file on disk. */
 const MAP_FILE = path.join(STORAGE_DIR, 'system-map.json');
 
+/** Keywords used to identify user actions from step titles (e.g. click, fill, hover). */
 const ACTION_KEYWORDS = ['click', 'fill', 'type', 'press', 'select', 'check', 'uncheck', 'hover', 'focus', 'goto', 'navigate'];
+/** Keywords used to identify assertions from step titles (e.g. expect, toBeVisible). */
 const ASSERTION_KEYWORDS = ['expect', 'toBeVisible', 'toHaveText', 'toHaveValue', 'toBeEnabled', 'toBeChecked', 'toContainText', 'toHaveURL'];
+/**
+ * Predefined coverage gap categories mapped to their expected test scenarios.
+ * Used to identify missing test coverage for each route.
+ */
 const COVERAGE_GAPS: Record<string, string[]> = {
   'validation': ['invalid input', 'empty state', 'required fields'],
   'error': ['404', 'timeout', 'network error', '500'],

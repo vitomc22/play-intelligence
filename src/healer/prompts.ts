@@ -3,10 +3,15 @@
  * These prompts guide the AI agent in identifying root causes and applying fixes to failing tests.
  */
 
+/**
+ * Collection of prompt templates used by the Healer module to instruct the Aider AI agent.
+ * Each prompt targets a specific phase of the automated healing workflow.
+ */
 export const HEALER_PROMPTS = {
   /**
-   * Prompt principal para o Aider corrigir testes
-   * Baseado na análise de falhas já realizada
+   * Primary prompt for instructing Aider to fix failing Playwright tests.
+   * Includes common failure patterns (WebKit errors, timing issues, network failures)
+   * and their recommended solutions.
    */
   fixFailingTests: `
 Você é um especialista em testes automatizados com Playwright. Corrija os testes falhos automaticamente.
@@ -49,7 +54,8 @@ Mantenha clareza técnica mas em português.
 `,
 
   /**
-   * Prompt para análise detalhada antes de corrigir
+   * Prompt for detailed root-cause analysis before applying fixes.
+   * Instructs the AI to categorize failures by type and prioritize corrections.
    */
   analyzeBeforeFix: `
 Você é um agente de análise de testes. Baseado na análise de falhas fornecida:
@@ -72,7 +78,8 @@ Depois, parta para a implementação.
 `,
 
   /**
-   * Prompt para validar que os testes passam
+   * Prompt for post-fix validation.
+   * Instructs the AI to re-run tests, identify residual failures, and produce a success report.
    */
   validateFixes: `
 Você é um validador de testes. Após implementar as correções:
@@ -90,7 +97,8 @@ Gere um relatório final com:
 `,
 
   /**
-   * Prompt para documentar as mudanças
+   * Prompt for generating a change log after fixes are applied.
+   * Outputs a structured Markdown summary of modified files and the rationale behind each change.
    */
   documentChanges: `
 Após corrigir os testes, documente as mudanças em um formato claro:
