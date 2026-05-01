@@ -85,14 +85,14 @@ async function analyzeFailures() {
   const parts = context.split('## FAILURE');
   const header = parts[0];
   const failureBlocks = parts.slice(1);
-  
+
   let newContext = header;
   let hasChanges = false;
 
   if (failureBlocks.length > 0) {
     for (const block of failureBlocks) {
       let fullBlock = `## FAILURE${block}`;
-      
+
       // Se já tiver análise visual, mantém o bloco original
       if (block.includes('### Análise Visual')) {
         newContext += fullBlock;
@@ -111,7 +111,7 @@ async function analyzeFailures() {
           try {
             const visualAnalysis = await provider.analyzeImage(screenshotPath, PROMPTS.analyzeScreenshot);
             fullBlock = fullBlock.replace(
-              '---', 
+              '---',
               `### Análise Visual (Gemma 4 Vision)\n${visualAnalysis}\n\n---`
             );
             hasChanges = true;
@@ -137,7 +137,7 @@ async function analyzeFailures() {
   // 2. Análise de Padrões e Causa Raiz
   console.log('📋 Analisando padrões de falha (Texto + Visão)...');
   const response = await provider.analyze(PROMPTS.analyzeFailures, `${context}\n\n${systemMap}`);
-  
+
   const formattedResponse = `
 # 🔍 Playwright Intelligence - Análise de Resultados
 > Gerado em: ${new Date().toLocaleString('pt-BR')}
@@ -186,7 +186,7 @@ async function suggestTests() {
   });
 
   const response = await provider.analyze(PROMPTS.suggestTests, systemMap);
-  
+
   const formattedResponse = `
 # 🧪 Playwright Intelligence - Sugestões de Testes
 > Gerado em: ${new Date().toLocaleString('pt-BR')}
@@ -237,7 +237,7 @@ async function identifyFragility() {
   });
 
   const response = await provider.analyze(PROMPTS.identifyFragility, `${context}\n\n${systemMap}`);
-  
+
   const formattedResponse = `
 # 🔍 Playwright Intelligence - Relatório de Fragilidade
 > Gerado em: ${new Date().toLocaleString('pt-BR')}
