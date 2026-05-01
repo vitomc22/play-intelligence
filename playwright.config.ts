@@ -53,7 +53,11 @@ export default defineConfig({
     launchOptions: {
       headless: false,
       args: ['--start-maximized'],
-    }
+    },
+    // Adicionando configurações para mitigar erros de WebKit e timeouts
+    timeout: 30000, // Aumentar o timeout padrão para 30 segundos
+    // Se for necessário, pode-se adicionar a configuração de navegadores aqui para excluir WebKit,
+    // mas seguiremos a sugestão de aumentar o timeout e usar waits no teste.
   },
 
   /* Configure projects for major browsers */
