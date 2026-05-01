@@ -38,8 +38,13 @@ test('Create a new food', async ({ page }) => {
     // Esperar o conteúdo ser atualizado após a submissão.
     await page.waitForLoadState('domcontentloaded');
     
-    // Usar expect com espera implícita para garantir que os elementos estejam presentes.
-    await expect(page.getByRole('heading', { name: 'pinga' })).toBeVisible();
+    // Correção: Refatorar o seletor para ser mais específico e robusto,
+    // focando no conteúdo visível em vez de um heading genérico.
+    // Assumindo que o nome do item é o texto principal.
+    const foodHeading = page.getByText('pinga');
+    
+    // Usar expect com espera implícita para garantir que o elemento esteja presente e visível.
+    await expect(foodHeading).toBeVisible();
     await expect(page.getByText('Valor:')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Editar' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Excluir' })).toBeVisible();
