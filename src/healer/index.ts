@@ -181,23 +181,35 @@ ${HEALER_PROMPTS.fixFailingTests}
    * @private
    */
   private prepareAnalysisContext(analysis: string): string {
-    // Extrai informações importantes do arquivo de análise
     const lines = analysis.split('\n');
-
     let context = '';
-    let inPatternSection = false;
+    let inRelevantSection = false;
 
     for (const line of lines) {
-      if (line.includes('Padrão') || inPatternSection) {
-        context += line + '\n';
-        inPatternSection = true;
+      // Começa a capturar em seções de Sumário, Detalhes ou Ações
+      if (
+        line.includes('## 1.') || 
+        line.includes('## 2.') || 
+        line.includes('## 3.') || 
+        line.includes('Padrão')
+      ) {
+        inRelevantSection = true;
       }
-      if (inPatternSection && line.includes('---')) {
-        break;
+
+      if (inRelevantSection) {
+        context += line + '\n';
+      }
+
+      // Para se chegar na seção de fragilidade ou notas finais (para reduzir ruído)
+      if (inRelevantSection && (line.includes('## 4.') || line.includes('---'))) {
+        // Opcional: break ou apenas parar de capturar
+        // Por enquanto vamos manter até o final das ações recomendadas
       }
     }
 
-    return context || analysis;
+    // Se o contexto extraído for muito pequeno (menos de 100 caracteres), 
+    // manda a análise inteira para garantir que o Aider tenha informação.
+    return context.trim().length > 100 ? context.trim() : analysis;
   }
 
   /**
