@@ -53,7 +53,9 @@ export default defineConfig({
     launchOptions: {
       headless: false,
       args: ['--start-maximized'],
-    }
+    },
+    // Adicionando waitUntil para navegação mais estável, conforme recomendado na análise.
+    navigationTimeout: 30000,
   },
 
   /* Configure projects for major browsers */

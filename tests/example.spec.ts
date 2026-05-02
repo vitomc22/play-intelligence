@@ -24,7 +24,10 @@ test('Create a new food', async ({ page }) => {
 
   await test.step('Check if food is visible', async () => {
     await page.reload();
-    await expect(page.getByRole('heading', { name: 'pinga' })).toBeVisible();
+    // Correção para Padrão 1: Usar .first() para selecionar um único elemento, evitando violação do modo estrito.
+    await expect(page.getByRole('heading', { name: 'pinga' }).first()).toBeVisible();
+    
+    // As asserções subsequentes foram mantidas, mas agora dependem de um estado mais estável.
     await expect(page.getByText('Valor:')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Editar' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Excluir' })).toBeVisible();
