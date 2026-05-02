@@ -11,7 +11,7 @@ import type {
   Suite,
   FullResult,
 } from '@playwright/test/reporter';
-import { FailureCollector } from './collector';
+
 import { SystemMapper } from './mapper';
 
 /**
@@ -36,7 +36,7 @@ export class PlaywrightIntelligence implements Reporter {
    * Initializes the combined reporter with its internal sub-reporters.
    */
   constructor() {
-    this.reporters = [new FailureCollector(), new SystemMapper()];
+    this.reporters = [new SystemMapper()];
   }
 
   /**

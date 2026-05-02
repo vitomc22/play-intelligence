@@ -47,7 +47,7 @@ export const config = {
    */
   paths: {
     storage: process.env.STORAGE_DIR || './storage',
-    context: process.env.STORAGE_DIR ? `${process.env.STORAGE_DIR}/context.md` : './storage/context.md',
+    testResults: process.env.TEST_RESULTS_DIR || './test-results',
     systemMap: process.env.STORAGE_DIR
       ? `${process.env.STORAGE_DIR}/system-map.json`
       : './storage/system-map.json',

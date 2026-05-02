@@ -1,5 +1,4 @@
 services:
-  # ─── Ollama: Modelo local (Qwen 7B) ─────────────────────
   ollama:
     image: ollama/ollama:latest
     container_name: playwright-ollama
@@ -10,13 +9,21 @@ services:
     environment:
       - OLLAMA_HOST=0.0.0.0:11434
       - OLLAMA_ORIGINS="*"
-      - OLLAMA_CONTEXT_LENGTH=32768
-    
-    # Adicione a limitação numérica explícita (troque '4' pelo número de núcleos do seu processador, se preferir)
+      - OLLAMA_CONTEXT_LENGTH=4096
+      # A MÁGICA: Ativa o motor Vulkan
+      #- OLLAMA_VULKAN=1
+
+      # Precisamos devolver o acesso físico da placa gráfica para o Vulkan enxergar
+    devices:
+      - /dev/dri:/dev/dri
+
     deploy:
       resources:
         limits:
+          # Liberamos 6 das 8 threads para o Ollama trabalhar pesado.
+          # As 2 threads restantes garantem que o seu Linux não trave.
           cpus: '6'
+
     restart: unless-stopped
     network_mode: bridge
     healthcheck:

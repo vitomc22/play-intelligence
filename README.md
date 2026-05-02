@@ -1,57 +1,60 @@
 # 🤖 Playwright Intelligence
 
-Ferramenta que intercepta a execução de testes Playwright para coletar contexto de falhas, mapear cobertura do sistema e usar IA local (Ollama) ou nuvem (Anthropic/OpenAI) para analisar padrões, sugerir melhorias e até corrigir testes automaticamente.
+Ferramenta que analisa execuções de testes Playwright para coletar contexto nativo de falhas, mapear cobertura do sistema e usar IA local (Ollama) ou nuvem (Anthropic/OpenAI) para extrair padrões, analisar visualmente screenshots, sugerir melhorias e até corrigir testes automaticamente.
 
 **🎯 Sem custos de API (opcional). Roda 100% localmente no seu PC.**
 
 ---
 
-## 🏗️ Arquitetura
+## 🏗️ Nova Arquitetura (v1.2)
 
-O sistema é dividido em quatro camadas principais que trabalham em conjunto para transformar falhas de teste em insights e correções:
+O sistema consome nativamente os artefatos de erro do Playwright, eliminando redundâncias. Ele é dividido em camadas que trabalham em conjunto para transformar falhas em insights:
 
 ```mermaid
 graph TD
-    A["🧪 Testes Playwright<br/><code>tests/**/*.spec.ts</code>"] -->|Executa| B["📊 Reporter Custom<br/><code>src/reporter/</code>"]
+    A["🧪 Testes Playwright<br/><code>tests/**/*.spec.ts</code>"] -->|Executa| B["📊 Artefatos Nativos<br/><code>test-results/</code><br/>(error-context.md & .png)"]
     
-    B -->|Coleta falhas & contexto| C["📦 Storage<br/>• context.md<br/>• system-map.json<br/>• failures/"]
+    A -->|Mapeia Sistema| C["🗺️ System Mapper<br/><code>src/reporter/</code>"]
+    C -->|Gera| D["📦 Storage<br/><code>system-map.json</code>"]
     
-    C -->|Analisa| D["🤖 IA Layer<br/>Ollama / Anthropic / OpenAI"]
+    B -->|Contexto & Visão| E["🤖 IA Layer<br/>Ollama / Anthropic / OpenAI"]
+    D -->|Contexto Lógico| E
     
-    D -->|Responde| E["📝 Análise de Falhas<br/><code>storage/analysis-failures.md</code>"]
+    E -->|Analisa & Consolida| F["📝 Análise de Falhas<br/><code>storage/analysis-failures.md</code>"]
     
-    E -->|Passado para| F["🏥 Healer - Aider<br/><code>src/healer/</code>"]
+    F -->|Passado para| G["🏥 Healer - Aider<br/><code>src/healer/</code>"]
     
-    F -->|Executa via CLI| G["🤖 Aider<br/>Edição de Código com IA"]
+    G -->|Executa via CLI| H["🤖 Aider<br/>Edição de Código com IA"]
     
-    G -->|Corrige| A
+    H -->|Corrige| A
     
-    G -->|Valida| H["✅ Testes Passando?"]
+    H -->|Valida| I["✅ Testes Passando?"]
     
-    H -->|Sim| I["📄 Relatório Final<br/><code>healing-report.md</code>"]
+    I -->|Sim| J["📄 Relatório Final<br/><code>healing-report.md</code>"]
     
-    H -->|Não| J["🔄 Iteração<br/>Reanalisa & corrige"]
+    I -->|Não| K["🔄 Iteração<br/>Reanalisa & corrige"]
     
-    J -->|Continua| E
+    K -->|Continua| F
 
     style A fill:#4CAF50,color:#fff
-    style B fill:#2196F3,color:#fff
-    style C fill:#FF9800,color:#fff
-    style D fill:#9C27B0,color:#fff
-    style E fill:#F44336,color:#fff
-    style F fill:#00BCD4,color:#fff
-    style G fill:#673AB7,color:#fff
-    style H fill:#3F51B5,color:#fff
-    style I fill:#4CAF50,color:#fff
-    style J fill:#FFC107,color:#000
+    style B fill:#FF9800,color:#fff
+    style C fill:#2196F3,color:#fff
+    style D fill:#FF9800,color:#fff
+    style E fill:#9C27B0,color:#fff
+    style F fill:#F44336,color:#fff
+    style G fill:#00BCD4,color:#fff
+    style H fill:#673AB7,color:#fff
+    style I fill:#3F51B5,color:#fff
+    style J fill:#4CAF50,color:#fff
+    style K fill:#FFC107,color:#000
 ```
 
 ### Componentes Principais
 
-1.  **Reporter (`src/reporter/`)**: Intercepta a execução do Playwright e coleta dados de screenshots, stack traces e estado do DOM.
-2.  **Analyzer (`src/analyzer/`)**: Interface com provedores de IA para processar os dados coletados.
-3.  **Healer (`src/healer/`)**: Orquestra a correção automática de testes usando o **Aider**.
-4.  **Storage (`storage/`)**: Camada de persistência para contextos de falha, mapas de sistema e relatórios.
+1.  **Test Results Nativos (`test-results/`)**: Aproveita a pasta padrão do Playwright. Cada falha gera um `error-context.md` nativo junto com o screenshot de erro.
+2.  **Reporter (`src/reporter/`)**: Reporter inteligente (`SystemMapper`) focado exclusivamente em mapear as rotas, cobertura de testes e gerar o `system-map.json`.
+3.  **Analyzer (`src/analyzer/`)**: O CLI (`ai:analyze`) faz a varredura das falhas na pasta `test-results`, processa as imagens localmente adicionando logs de Visão Computacional aos contextos e consolida a causa raiz usando modelos LLM/VLM.
+4.  **Healer (`src/healer/`)**: Orquestra a correção automática de testes usando o **Aider** a partir das análises levantadas.
 
 ---
 
@@ -60,15 +63,16 @@ graph TD
 ```
 play-intelligence/
 ├── src/                              # Código-fonte principal
-│   ├── reporter/                     # Reporter Playwright (Collector & Mapper)
+│   ├── reporter/                     # Reporter Playwright (SystemMapper)
 │   ├── analyzer/                     # Análise com IA (Clients & Prompts)
 │   ├── healer/                       # Correção automática com Aider
-│   ├── cli.ts                        # Interface de linha de comando
+│   ├── cli.ts                        # Interface de linha de comando principal
 │   └── config.ts                     # Configuração centralizada
-├── storage/                          # Dados gerados (contexto, mapas, reports)
+├── storage/                          # Dados estáticos persistentes (mapas, reports finais)
+├── test-results/                     # Contexto de erros nativo e screenshots
 ├── tests/                            # Testes de exemplo
 ├── .github/workflows/                # CI/CD com GitHub Actions
-├── docker-compose.yml                # Docker para Ollama
+├── docker-compose.yml                # Docker para Ollama (Otimizado para CPU/GPU)
 ├── setup-ollama.sh                   # Script de setup automatizado
 └── playwright.config.ts              # Configuração do Playwright
 ```
@@ -89,17 +93,17 @@ bash setup-ollama.sh
 
 ### 2. Configuração do Playwright
 
-Adicione o reporter no seu arquivo `playwright.config.ts`:
+Certifique-se de que o seu `playwright.config.ts` captura screenshots em falhas e mantém o nosso SystemMapper configurado:
 
 ```typescript
 export default defineConfig({
   reporter: [
     ['list'],
-    ['./src/reporter/index.ts'],
+    ['./src/reporter/index.ts'], // SystemMapper
   ],
   use: {
     trace: 'on',
-    screenshot: 'on',
+    screenshot: 'on', // Essencial para a IA de Visão
   }
 });
 ```
@@ -107,13 +111,13 @@ export default defineConfig({
 ### 3. Fluxo de Trabalho
 
 ```bash
-# Executa testes e coleta contexto
+# Executa testes (as falhas vão para test-results/)
 npm run test
 
-# Analisa falhas e identifica padrões
+# Analisa falhas (Visão Computacional nos prints + Análise Causa Raiz)
 npm run ai:analyze
 
-# (Opcional) Tenta corrigir os testes automaticamente
+# (Opcional) Tenta corrigir os testes automaticamente com Aider
 npm run ai:heal
 ```
 
@@ -123,10 +127,10 @@ npm run ai:heal
 
 | Comando | Descrição |
 |---------|-----------|
-| `npm run test` | Executa a suite de testes Playwright com coleta de dados. |
-| `npm run ai:analyze` | Gera um relatório detalhado sobre padrões de falha e causas raiz. |
-| `npm run ai:suggest` | Sugere novos cenários de teste baseados na cobertura atual. |
-| `npm run ai:heal` | Inicia o processo de auto-correção usando Aider. |
+| `npm run test` | Executa a suite Playwright e gera o contexto de erro/screenshots. |
+| `npm run ai:analyze` | Injeta Análise Visual e gera um relatório sobre causas raiz. |
+| `npm run ai:suggest` | Sugere novos cenários de teste baseados na cobertura do `system-map`. |
+| `npm run ai:heal` | Inicia o processo de auto-correção usando o Aider. |
 | `npm run ai:health` | Verifica a conectividade com o provedor de IA. |
 | `npm run build` | Compila o projeto TypeScript para JavaScript. |
 
@@ -134,13 +138,16 @@ npm run ai:heal
 
 ## ⚙️ Configuração (.env)
 
-O projeto é altamente configurável através de variáveis de ambiente:
+Configure o comportamento do ambiente no seu `.env`:
 
 ```env
 # Provedor: ollama | anthropic | openai
 AI_PROVIDER=ollama
-OLLAMA_MODEL=gemma4:e2b
+OLLAMA_MODEL=llama3.2-vision # Modelo multimodal recomendado
 OLLAMA_URL=http://localhost:11434
+
+# Diretórios
+TEST_RESULTS_DIR=./test-results
 
 # Timeouts e Parâmetros
 AI_TIMEOUT_MS=900000
@@ -153,12 +160,13 @@ AIDER_AUTO_COMMIT=true
 
 ---
 
-## 🤖 Modelos Recomendados
+## 🤖 Modelos Recomendados (Ollama)
 
-Para execução local em máquinas com 16GB RAM (ex: Ryzen 7):
-- **gemma4:e2b**: Especializado em análise técnica e código.
-- **qwen2.5-coder:7b**: Excelente equilíbrio entre performance e precisão.
-- **deepseek-r1:7b**: Ideal para raciocínio lógico complexo.
+O `docker-compose.yml` está ajustado com limitação de threads de CPU para evitar travamentos de sistema. Se enfrentar alucinações severas com aceleração gráfica (Vulkan), recomendamos desabilitar o Vulkan e utilizar computação direta por CPU.
+
+- **llama3.2-vision** / **llava**: Obrigatório para Análise Visual (Visão Computacional das falhas). Suportam a passagem da imagem em base64 corretamente.
+- **gemma4:e2b** / **qwen2.5-coder:7b**: Especializados em análise técnica de código, ótimos para a auto-correção do `healer`.
+- **deepseek-r1:7b**: Ideal para fluxos complexos de diagnóstico de testes (reasoning model).
 
 ---
 
@@ -176,15 +184,14 @@ O projeto inclui uma integração nativa com GitHub Actions para rodar testes.
 
 ## 📜 Histórico de Mudanças
 
-- **v1.1**: Reorganização total do código para a pasta `src/`.
-- **v1.1**: Suporte a "Thinking Mode" no Gemma para análises mais profundas.
-- **v1.0**: Integração inicial com Aider para auto-correção.
-- **v1.0**: Implementação do `SystemMapper` para visualização de cobertura.
+- **v1.2**: Migração para a arquitetura nativa do Playwright (`test-results/`), removendo o `FailureCollector` e integrando suporte a modelos Visuais (`llama3.2-vision`).
+- **v1.1**: Reorganização total do código para a pasta `src/` e suporte a "Thinking Mode" no Gemma para análises mais profundas.
+- **v1.0**: Integração inicial com Aider para auto-correção e `SystemMapper` para visualização de cobertura.
 
 ---
 
 ## 📞 Suporte e Troubleshooting
 
-- Se o Ollama falhar por timeout, aumente `AI_TIMEOUT_MS`.
-- Verifique se o Docker está rodando com `make health`.
-- Logs detalhados em `storage/context.md`.
+- **A IA está inventando contexto na imagem?**: Verifique se o modelo suporta visão (`llama3.2-vision` ou `llava`) e considere desabilitar o `OLLAMA_VULKAN=1` no Docker Compose se estiver usando placas AMD, pois a corrupção do tensor no Vulkan gera alucinações.
+- **Timeout no Ollama**: Aumente a variável `AI_TIMEOUT_MS`. Se rodar por CPU, as respostas podem demorar vários minutos.
+- **Onde encontro o log dos erros?**: Todas as descrições de falhas de teste (e as análises de visão da IA) ficam injetadas diretamente na pasta de falhas nativa: `test-results/nome-do-teste/error-context.md`.

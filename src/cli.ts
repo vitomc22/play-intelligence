@@ -53,22 +53,38 @@ async function main() {
 }
 
 /**
+ * Recursively finds all error-context.md files in a directory.
+ */
+function findErrorContexts(dir: string, fileList: string[] = []): string[] {
+  if (!fs.existsSync(dir)) return fileList;
+  const files = fs.readdirSync(dir);
+  for (const file of files) {
+    const filePath = path.join(dir, file);
+    if (fs.statSync(filePath).isDirectory()) {
+      findErrorContexts(filePath, fileList);
+    } else if (file === 'error-context.md') {
+      fileList.push(filePath);
+    }
+  }
+  return fileList;
+}
+
+/**
  * Analyzes recent test failures.
  * Reads failure context and system map, then sends them to the AI for pattern identification.
  * Results are displayed in the console and saved as a Markdown report.
  */
 async function analyzeFailures() {
-  const contextPath = config.paths.context;
+  const testResultsPath = (config.paths as any).testResults || path.join(process.cwd(), 'test-results');
 
-  if (!fs.existsSync(contextPath)) {
-    console.error(`❌ Arquivo de contexto não encontrado: ${contextPath}`);
-    console.error('   Execute: npx playwright test --reporter ./src/reporter/index.ts');
+  if (!fs.existsSync(testResultsPath)) {
+    console.error(`❌ Diretório de resultados não encontrado: ${testResultsPath}`);
+    console.error('   Execute os testes do Playwright para gerar falhas.');
     process.exit(1);
   }
 
   console.log('\n📊 Iniciando análise inteligente...');
 
-  let context = fs.readFileSync(contextPath, 'utf-8');
   const systemMap = fs.existsSync(config.paths.systemMap)
     ? fs.readFileSync(config.paths.systemMap, 'utf-8')
     : 'Mapa não disponível';
@@ -81,62 +97,52 @@ async function analyzeFailures() {
     temperature: config.ai.temperature,
   });
 
-  // 1. Processamento Visual (Gemma 4 Vision)
-  const parts = context.split('## FAILURE');
-  const header = parts[0];
-  const failureBlocks = parts.slice(1);
+  const errorContextFiles = findErrorContexts(testResultsPath);
 
-  let newContext = header;
+  if (errorContextFiles.length === 0) {
+    console.log('✅ Nenhuma falha encontrada para analisar na pasta test-results.');
+    return;
+  }
+
+  let combinedContext = '';
   let hasChanges = false;
 
-  if (failureBlocks.length > 0) {
-    for (const block of failureBlocks) {
-      let fullBlock = `## FAILURE${block}`;
+  for (const contextFile of errorContextFiles) {
+    let content = fs.readFileSync(contextFile, 'utf-8');
+    const dir = path.dirname(contextFile);
+    const failureId = path.basename(dir);
 
-      // Se já tiver análise visual, mantém o bloco original
-      if (block.includes('### Análise Visual')) {
-        newContext += fullBlock;
-        continue;
-      }
-
-      // Procura por screenshot
-      const screenshotMatch = block.match(/!\[failure-\d+\]\((.*?)\)/);
-      if (screenshotMatch && screenshotMatch[1]) {
-        const screenshotPath = screenshotMatch[1];
-        const idMatch = block.match(/#(\d+)/);
-        const id = idMatch ? idMatch[1] : '?';
-
-        if (fs.existsSync(screenshotPath) && provider.analyzeImage) {
-          process.stdout.write(`🖼️  Analisando visualmente FAILURE #${id}...`);
+    // 1. Processamento Visual (Gemma 4 Vision)
+    if (!content.includes('### Análise Visual')) {
+      const pngs = fs.readdirSync(dir).filter(f => f.endsWith('.png'));
+      if (pngs.length > 0) {
+        // Usa a primeira imagem PNG encontrada no diretório da falha
+        const screenshotPath = path.join(dir, pngs[0]);
+        if (provider.analyzeImage) {
+          process.stdout.write(`🖼️  Analisando visualmente FAILURE em ${failureId}...`);
           try {
             const visualAnalysis = await provider.analyzeImage(screenshotPath, PROMPTS.analyzeScreenshot);
-            fullBlock = fullBlock.replace(
-              '---',
-              `### Análise Visual (Gemma 4 Vision)\n${visualAnalysis}\n\n---`
-            );
+            content += `\n\n### Análise Visual (Gemma 4 Vision)\n${visualAnalysis}\n`;
+            fs.writeFileSync(contextFile, content);
             hasChanges = true;
             process.stdout.write(' ✅\n');
           } catch (err) {
             process.stdout.write(' ❌ (erro na visão)\n');
           }
-        } else if (!fs.existsSync(screenshotPath)) {
-          console.warn(`⚠️  Screenshot não encontrado para FAILURE #${id}: ${screenshotPath}`);
         }
       }
-      newContext += fullBlock;
     }
+
+    combinedContext += `\n## FAILURE from ${failureId}\n${content}\n---\n`;
   }
 
-  // Se houve novas análises visuais, atualiza o arquivo context.md
   if (hasChanges) {
-    context = newContext;
-    fs.writeFileSync(contextPath, context);
     console.log('📝 Contexto atualizado com descrições visuais.');
   }
 
   // 2. Análise de Padrões e Causa Raiz
   console.log('📋 Analisando padrões de falha (Texto + Visão)...');
-  const response = await provider.analyze(PROMPTS.analyzeFailures, `${context}\n\n${systemMap}`);
+  const response = await provider.analyze(PROMPTS.analyzeFailures, `${combinedContext}\n\n${systemMap}`);
 
   const formattedResponse = `
 # 🔍 Playwright Intelligence - Análise de Resultados
@@ -213,17 +219,23 @@ _💡 Dica: Copie e cole os testes acima em novos arquivos na pasta 'tests/'._
  * Identifies fragile or "flaky" tests by analyzing historical failure data and system mapping.
  */
 async function identifyFragility() {
-  const contextPath = config.paths.context;
+  const testResultsPath = (config.paths as any).testResults || path.join(process.cwd(), 'test-results');
   const systemMapPath = config.paths.systemMap;
 
-  if (!fs.existsSync(contextPath)) {
-    console.error(`❌ Arquivo de contexto não encontrado: ${contextPath}`);
+  if (!fs.existsSync(testResultsPath)) {
+    console.error(`❌ Diretório de resultados não encontrado: ${testResultsPath}`);
     process.exit(1);
   }
 
   console.log('\n🔍 Analisando fragilidade de testes...');
 
-  const context = fs.readFileSync(contextPath, 'utf-8');
+  const errorContextFiles = findErrorContexts(testResultsPath);
+  let combinedContext = '';
+  for (const contextFile of errorContextFiles) {
+    const content = fs.readFileSync(contextFile, 'utf-8');
+    combinedContext += `\n## FAILURE from ${path.basename(path.dirname(contextFile))}\n${content}\n---\n`;
+  }
+
   const systemMap = fs.existsSync(systemMapPath)
     ? fs.readFileSync(systemMapPath, 'utf-8')
     : 'Mapa não disponível';
@@ -236,7 +248,7 @@ async function identifyFragility() {
     temperature: config.ai.temperature,
   });
 
-  const response = await provider.analyze(PROMPTS.identifyFragility, `${context}\n\n${systemMap}`);
+  const response = await provider.analyze(PROMPTS.identifyFragility, `${combinedContext}\n\n${systemMap}`);
 
   const formattedResponse = `
 # 🔍 Playwright Intelligence - Relatório de Fragilidade
