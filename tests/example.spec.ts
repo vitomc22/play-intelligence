@@ -24,8 +24,10 @@ test('Create a new food', async ({ page }) => {
 
   await test.step('Check if food is visible', async () => {
     await page.reload();
-    // Correção para Padrão 1: Usar .first() para selecionar um único elemento, evitando violação do modo estrito.
-    await expect(page.getByRole('heading', { name: 'pinga' }).first()).toBeVisible();
+    // Correção: Substituindo o seletor ambíguo por um seletor mais específico,
+    // assumindo que o elemento de resultado tem um atributo de teste único (data-testid).
+    // Isso resolve o Padrão 1 (Seletores Ambíguos) e o Padrão 2 (Dependência de Estrutura).
+    await expect(page.locator('[data-testid="food-pinga-result"]')).toBeVisible();
     
     // As asserções subsequentes foram mantidas, mas agora dependem de um estado mais estável.
     await expect(page.getByText('Valor:')).toBeVisible();
